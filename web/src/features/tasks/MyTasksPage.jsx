@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { StatusBadge, TypeTag, PriorityTag } from '@/components/common/badges';
 import { PageLoader, ErrorState, EmptyState } from '@/components/common/states';
 import { TaskDialog } from '@/features/board/TaskDialog';
-import { cn } from '@/lib/utils';
+import { cn, taskCode } from '@/lib/utils';
 
 export default function MyTasksPage() {
   const { user } = useAuth();
@@ -40,7 +40,10 @@ export default function MyTasksPage() {
                 {items.map((t) => (
                   <Card key={t._id} className="cursor-pointer p-3 transition hover:shadow-md" onClick={() => setOpenId(t._id)}>
                     <div className="flex items-center justify-between">
-                      <TypeTag type={t.type} />
+                      <div className="flex items-center gap-2">
+                        {taskCode(t) && <span className="font-mono text-[10px] text-slate-400">{taskCode(t)}</span>}
+                        <TypeTag type={t.type} />
+                      </div>
                       <PriorityTag priority={t.priority} />
                     </div>
                     <p className="mt-2 text-sm font-medium text-slate-800">{t.title}</p>

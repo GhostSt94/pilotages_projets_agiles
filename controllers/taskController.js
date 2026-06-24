@@ -42,6 +42,7 @@ const listTasks = asyncHandler(async (req, res) => {
 
   const tasks = await Task.find(filter)
     .populate('assignee', 'name email')
+    .populate('project', 'key name')
     .sort({ order: 1, createdAt: 1 });
   res.json(tasks);
 });
@@ -50,6 +51,7 @@ const listTasks = asyncHandler(async (req, res) => {
 const getTask = asyncHandler(async (req, res) => {
   const task = await Task.findById(req.params.id)
     .populate('assignee', 'name email')
+    .populate('project', 'key name')
     .populate('comments.author', 'name email')
     .populate('attachments.uploadedBy', 'name');
   if (!task) throw ApiError.notFound('Tâche introuvable.');
@@ -63,14 +65,20 @@ const createTask = asyncHandler(async (req, res) => {
   const proj = await Project.findById(project);
   if (!proj) throw ApiError.notFound('Projet introuvable.');
 
-  if (!hasPermission(req, 'project.manage') && !isProjectMember(proj, req.user._id)) {
+  // Membre du projet requis (admin = accès global via project.manage.any).
+  if (!hasPermission(req, 'project.manage.any') && !isProjectMember(proj, req.user._id)) {
     throw ApiError.forbidden('Vous n\'êtes pas membre de ce projet.');
   }
 
   await assertSprintBelongsToProject(sprint, project);
 
+  // Numéro séquentiel par projet (KEY-N).
+  const last = await Task.findOne({ project }).sort({ number: -1 }).select('number');
+  const number = (last?.number || 0) + 1;
+
   const task = await Task.create({
     project,
+    number,
     sprint: sprint || null,
     title,
     description,

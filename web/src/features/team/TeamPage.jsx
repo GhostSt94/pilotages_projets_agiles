@@ -145,7 +145,7 @@ export default function TeamPage() {
                   </TableCell>
                   <TableCell>
                     {String(m._id) === managerId ? (
-                      <Badge className="bg-indigo-100 text-indigo-700">Chef de projet</Badge>
+                      <Badge className="bg-accent text-accent-foreground">Chef de projet</Badge>
                     ) : (
                       <RoleBadge role={m.role} />
                     )}

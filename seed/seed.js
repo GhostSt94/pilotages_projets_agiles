@@ -140,9 +140,11 @@ async function run() {
     { title: 'Composant en-tête + navigation', status: 'done', estimate: 4, assignee: dev1._id, type: 'feature', order: 2 },
   ];
 
+  let taskNumber = 0; // séquence KEY-N par projet (Atlas)
   for (const t of sprintTasks) {
     await Task.create({
       project: project._id,
+      number: ++taskNumber,
       sprint: sprint._id,
       title: t.title,
       description: `Tâche d'exemple : ${t.title}.`,
@@ -166,6 +168,7 @@ async function run() {
     const t = backlogTasks[i];
     await Task.create({
       project: project._id,
+      number: ++taskNumber,
       sprint: null,
       title: t.title,
       description: `Tâche backlog : ${t.title}.`,

@@ -15,7 +15,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { Plus, Calendar, Gauge, Trello, FolderKanban, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { usePageHeader } from '@/components/layout/AppShell';
 import { useProject } from '@/lib/project';
-import { useAuth, canModifyTask } from '@/lib/auth';
+import { useAuth, canModifyTask, can } from '@/lib/auth';
 import { useBoard } from '@/hooks/useProjects';
 import { useCapacity } from '@/hooks/useSprints';
 import { useMoveTask } from '@/hooks/useTasks';
@@ -63,8 +63,16 @@ export default function BoardPage() {
         <EmptyState
           icon={FolderKanban}
           title="Aucun projet"
-          description="Créez un projet (ou demandez à être ajouté à un projet) pour afficher le tableau."
-          action={<Button asChild><Link to="/projects"><FolderKanban className="h-4 w-4" /> Aller aux projets</Link></Button>}
+          description={
+            can(user, 'project.manage')
+              ? 'Créez un projet ou ajoutez-vous comme membre pour afficher le tableau.'
+              : 'Demandez à un manager de vous ajouter à un projet pour afficher le tableau.'
+          }
+          action={
+            can(user, 'project.manage')
+              ? <Button asChild><Link to="/settings?tab=projects"><FolderKanban className="h-4 w-4" /> Gérer les projets</Link></Button>
+              : null
+          }
         />
       </div>
     );
@@ -89,7 +97,7 @@ export default function BoardPage() {
   const filtering = isFiltering(filters);
   // Vue filtrée (le drag&drop continue d'opérer sur `board` complet).
   const viewBoard = filtering
-    ? TASK_STATUS_ORDER.reduce((acc, k) => ({ ...acc, [k]: board[k].filter((t) => matchesFilters(t, filters)) }), {})
+    ? TASK_STATUS_ORDER.reduce((acc, k) => ({ ...acc, [k]: board[k].filter((t) => matchesFilters(t, filters, currentProject?.key)) }), {})
     : board;
 
   function findContainer(id) {
@@ -204,6 +212,7 @@ export default function BoardPage() {
               tasks={viewBoard[status]}
               user={user}
               project={currentProject}
+              projectKey={currentProject?.key}
               onOpenTask={setDialogTaskId}
               onAdd={() => setCreateOpen(true)}
               onQuickStatus={onQuickStatus}
@@ -265,7 +274,7 @@ function CapacityMeter({ cap }) {
   );
 }
 
-function Column({ status, tasks, user, project, onOpenTask, onAdd, onQuickStatus }) {
+function Column({ status, tasks, user, project, projectKey, onOpenTask, onAdd, onQuickStatus }) {
   const meta = TASK_STATUS[status];
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const hours = tasks.reduce((s, t) => s + (t.estimate || 0), 0);
@@ -287,6 +296,7 @@ function Column({ status, tasks, user, project, onOpenTask, onAdd, onQuickStatus
             <SortableTask
               key={task._id}
               task={task}
+              projectKey={projectKey}
               onClick={() => onOpenTask(task._id)}
               disabled={!canModifyTask(user, project, task)}
               onQuickStatus={onQuickStatus}

@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { PageLoader, ErrorState, EmptyState } from '@/components/common/states';
 import { ROLE_COLORS } from '@/components/common/badges';
 
-const COLORS = ['indigo', 'violet', 'emerald', 'amber', 'rose', 'sky', 'slate'];
+const COLORS = ['blue', 'cyan', 'teal', 'emerald', 'amber', 'rose', 'sky', 'slate'];
 
 export default function RolesPanel() {
   const { data: roles = [], isLoading, isError, error, refetch } = useRoles();
@@ -105,7 +105,7 @@ function RoleFormDialog({ open, onOpenChange, role }) {
   const { data: catalog = [] } = usePermissionsCatalog();
   const create = useCreateRole();
   const update = useUpdateRole();
-  const [form, setForm] = useState({ name: '', label: '', color: 'indigo', description: '', permissions: [] });
+  const [form, setForm] = useState({ name: '', label: '', color: 'blue', description: '', permissions: [] });
 
   useEffect(() => {
     if (open) {
@@ -191,7 +191,7 @@ function RoleFormDialog({ open, onOpenChange, role }) {
             <div className="space-y-1.5 rounded-lg border p-2">
               {catalog.map((p) => (
                 <label key={p.key} className="flex cursor-pointer items-start gap-2 rounded-md p-1.5 hover:bg-slate-50">
-                  <input type="checkbox" className="mt-0.5 h-4 w-4 accent-indigo-600" checked={form.permissions.includes(p.key)} onChange={() => togglePerm(p.key)} />
+                  <input type="checkbox" className="mt-0.5 h-4 w-4 accent-blue-600" checked={form.permissions.includes(p.key)} onChange={() => togglePerm(p.key)} />
                   <span>
                     <span className="text-sm font-medium text-slate-700">{p.label}</span>
                     <span className="block text-[11px] text-slate-400">{p.description}</span>

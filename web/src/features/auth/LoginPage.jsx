@@ -47,7 +47,7 @@ export default function LoginPage() {
           <h2 className="text-3xl font-bold leading-tight">
             Planifiez vos sprints selon la capacité réelle de l'équipe.
           </h2>
-          <p className="mt-4 text-indigo-100">
+          <p className="mt-4 text-white/85">
             Kanban, congés et capacité réunis. Fini les sprints surchargés : Cadence calcule les heures
             réellement disponibles et alerte en cas de dépassement.
           </p>
@@ -55,15 +55,15 @@ export default function LoginPage() {
             {['Tableau Kanban par sprint', 'Capacité = jours travaillés − congés', 'Alerte de surcharge automatique'].map(
               (t) => (
                 <div key={t} className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-indigo-200" /> {t}
+                  <CheckCircle2 className="h-5 w-5 text-white/70" /> {t}
                 </div>
               )
             )}
           </div>
         </div>
-        <div className="relative z-10 text-xs text-indigo-200">Devox · Témara — projet de stage</div>
-        <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-indigo-500/40 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-10 h-80 w-80 rounded-full bg-violet-500/30 blur-3xl" />
+        <div className="relative z-10 text-xs text-white/70">Devox · Témara — projet de stage</div>
+        <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-10 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
       </div>
 
       {/* Formulaire */}

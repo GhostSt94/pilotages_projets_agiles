@@ -19,7 +19,7 @@ import { PageLoader, ErrorState, EmptyState } from '@/components/common/states';
 import { TableSkeleton } from '@/components/common/skeletons';
 import { RoleGate } from '@/components/layout/RoleGate';
 import { SPRINT_STATUS } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+import { cn, taskCode } from '@/lib/utils';
 import { TaskDialog } from '@/features/board/TaskDialog';
 import { CapacityPanel } from '@/features/sprints/CapacityPanel';
 import { SprintForm } from '@/features/sprints/SprintForm';
@@ -210,6 +210,7 @@ export default function PlanningPage() {
                       <TableRow key={t._id} className="cursor-pointer" onClick={() => setOpenTaskId(t._id)}>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {taskCode(t, currentProject?.key) && <span className="font-mono text-[10px] text-slate-400">{taskCode(t, currentProject?.key)}</span>}
                             <TypeTag type={t.type} withLabel={false} />
                             <span className="font-medium text-slate-800">{t.title}</span>
                             <PriorityTag priority={t.priority} />
@@ -255,6 +256,7 @@ export default function PlanningPage() {
                         <li key={t._id} className="flex items-center gap-2 px-4 py-2.5">
                           <button className="min-w-0 flex-1 text-left" onClick={() => setOpenTaskId(t._id)}>
                             <div className="flex items-center gap-2">
+                              {taskCode(t, currentProject?.key) && <span className="font-mono text-[10px] text-slate-400">{taskCode(t, currentProject?.key)}</span>}
                               <TypeTag type={t.type} withLabel={false} />
                               <span className="truncate text-sm font-medium text-slate-800">{t.title}</span>
                             </div>

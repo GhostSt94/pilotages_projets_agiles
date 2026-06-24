@@ -18,13 +18,13 @@ const SYSTEM_ROLES = [
   {
     name: 'admin',
     label: 'Admin',
-    color: 'violet',
+    color: 'slate',
     permissions: [...PERMISSION_KEYS], // toutes
   },
   {
     name: 'manager',
     label: 'Manager',
-    color: 'indigo',
+    color: 'blue',
     permissions: ['project.manage', 'sprint.manage', 'task.manage.any', 'leave.review', 'user.view'],
   },
   {

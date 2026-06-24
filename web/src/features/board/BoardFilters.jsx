@@ -10,8 +10,13 @@ export function isFiltering(f) {
   return f.q.trim() !== '' || f.assignee !== 'all' || f.priority !== 'all' || f.type !== 'all';
 }
 
-export function matchesFilters(task, f) {
-  if (f.q.trim() && !task.title.toLowerCase().includes(f.q.trim().toLowerCase())) return false;
+export function matchesFilters(task, f, projectKey) {
+  if (f.q.trim()) {
+    const q = f.q.trim().toLowerCase();
+    const code = task.number ? `${projectKey || ''}-${task.number}`.toLowerCase() : '';
+    const haystack = `${task.title} ${code} ${task.number ?? ''}`.toLowerCase();
+    if (!haystack.includes(q)) return false;
+  }
   if (f.assignee === 'none' && task.assignee) return false;
   if (f.assignee !== 'all' && f.assignee !== 'none' && String(task.assignee?._id) !== f.assignee) return false;
   if (f.priority !== 'all' && task.priority !== f.priority) return false;

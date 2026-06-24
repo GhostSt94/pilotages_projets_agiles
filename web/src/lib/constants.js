@@ -18,7 +18,7 @@ export const TASK_PRIORITY = {
 export const TASK_PRIORITY_ORDER = ['low', 'medium', 'high', 'critical'];
 
 export const TASK_TYPE = {
-  feature: { label: 'Fonctionnalité', icon: 'Sparkles', color: 'text-indigo-600' },
+  feature: { label: 'Fonctionnalité', icon: 'Sparkles', color: 'text-blue-700' },
   bug: { label: 'Bug', icon: 'Bug', color: 'text-red-600' },
   tech: { label: 'Technique', icon: 'Wrench', color: 'text-slate-600' },
 };
@@ -51,8 +51,8 @@ export const LEAVE_TYPE_ORDER = ['vacation', 'sick', 'personal', 'other'];
 
 export const ROLE = {
   developer: { label: 'Développeur', badge: 'bg-slate-100 text-slate-600' },
-  manager: { label: 'Manager', badge: 'bg-indigo-100 text-indigo-700' },
-  admin: { label: 'Admin', badge: 'bg-violet-100 text-violet-700' },
+  manager: { label: 'Manager', badge: 'bg-blue-100 text-blue-700' },
+  admin: { label: 'Admin', badge: 'bg-slate-200 text-slate-700' },
 };
 export const ROLE_ORDER = ['developer', 'manager', 'admin'];
 

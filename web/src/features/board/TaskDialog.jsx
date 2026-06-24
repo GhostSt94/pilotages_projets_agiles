@@ -10,6 +10,7 @@ import { useProject } from '@/lib/project';
 import { useAuth, canModifyTask } from '@/lib/auth';
 import { apiError } from '@/lib/api';
 import { formatDate } from '@/lib/dates';
+import { taskCode } from '@/lib/utils';
 import {
   TASK_TYPE,
   TASK_TYPE_ORDER,
@@ -199,6 +200,9 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 pr-12">
               <DialogTitle className="sr-only">{editing ? 'Détail de la tâche' : 'Nouvelle tâche'}</DialogTitle>
               <div className="flex items-center gap-2">
+                {editing && task && taskCode(task) && (
+                  <span className="font-mono text-xs font-medium text-slate-500">{taskCode(task)}</span>
+                )}
                 <TypeTag type={form.type} />
                 {editing && <StatusBadge status={form.status} />}
                 {editing && task?.createdAt && (

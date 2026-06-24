@@ -32,6 +32,8 @@ const taskSchema = new mongoose.Schema(
       ref: 'Project',
       required: true,
     },
+    // Numéro séquentiel par projet (affiché « KEY-N », ex. ATLAS-12).
+    number: { type: Number, default: null },
     // null => la tâche est dans le backlog.
     sprint: {
       type: mongoose.Schema.Types.ObjectId,
@@ -65,6 +67,7 @@ const taskSchema = new mongoose.Schema(
 // Index recommandés (cf. cahier des charges).
 taskSchema.index({ project: 1, sprint: 1, status: 1, order: 1 });
 taskSchema.index({ assignee: 1 });
+taskSchema.index({ project: 1, number: 1 });
 
 taskSchema.statics.STATUSES = TASK_STATUSES;
 taskSchema.statics.TYPES = TASK_TYPES;

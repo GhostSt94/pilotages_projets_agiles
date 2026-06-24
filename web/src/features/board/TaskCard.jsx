@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Clock, MessageSquare, GripVertical, MoreHorizontal, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, taskCode } from '@/lib/utils';
 import { Avatar } from '@/components/common/Avatar';
 import { TypeTag, PriorityTag } from '@/components/common/badges';
 import { TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/constants';
@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 /** Carte de tâche (présentation). */
-export function TaskCard({ task, onClick, dragging, grip = false, onQuickStatus }) {
+export function TaskCard({ task, onClick, dragging, grip = false, onQuickStatus, projectKey }) {
+  const code = taskCode(task, projectKey);
   return (
     <div
       onClick={onClick}
@@ -25,7 +26,10 @@ export function TaskCard({ task, onClick, dragging, grip = false, onQuickStatus 
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <TypeTag type={task.type} />
+        <div className="flex items-center gap-2">
+          {code && <span className="font-mono text-[10px] font-medium text-slate-400">{code}</span>}
+          <TypeTag type={task.type} />
+        </div>
         <div className="flex items-center gap-1">
           <PriorityTag priority={task.priority} />
           {onQuickStatus && <QuickStatusMenu task={task} onQuickStatus={onQuickStatus} />}
@@ -97,7 +101,7 @@ function QuickStatusMenu({ task, onQuickStatus }) {
  * Toute la carte est saisissable ; un clic simple (sans déplacement) ouvre le détail
  * grâce à la contrainte d'activation du PointerSensor (distance 5px).
  */
-export function SortableTask({ task, onClick, disabled, onQuickStatus }) {
+export function SortableTask({ task, onClick, disabled, onQuickStatus, projectKey }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task._id,
     disabled,
@@ -118,6 +122,7 @@ export function SortableTask({ task, onClick, disabled, onQuickStatus }) {
         dragging={isDragging}
         grip={!disabled}
         onQuickStatus={disabled ? undefined : onQuickStatus}
+        projectKey={projectKey}
       />
     </div>
   );
