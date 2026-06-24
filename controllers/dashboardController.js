@@ -1,7 +1,8 @@
-const { Sprint, Task } = require('../models');
+const { Sprint, Task, Project } = require('../models');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { computeSprintCapacity } = require('../services/capacityService');
+const { canAccessProject } = require('../utils/authz');
 
 // GET /dashboard?sprint= — avancement du sprint et charge par membre.
 const getDashboard = asyncHandler(async (req, res) => {
@@ -10,6 +11,11 @@ const getDashboard = asyncHandler(async (req, res) => {
 
   const sprint = await Sprint.findById(sprintId).populate('project', 'name key');
   if (!sprint) throw ApiError.notFound('Sprint introuvable.');
+
+  // Accès réservé aux membres du projet (ou accès global admin).
+  const project = await Project.findById(sprint.project?._id || sprint.project);
+  if (!project) throw ApiError.notFound('Projet du sprint introuvable.');
+  if (!canAccessProject(req, project)) throw ApiError.forbidden('Vous n\'êtes pas membre de ce projet.');
 
   const tasks = await Task.find({ sprint: sprint._id }).populate('assignee', 'name email');
 

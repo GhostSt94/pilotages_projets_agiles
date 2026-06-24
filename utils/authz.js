@@ -18,4 +18,18 @@ function canModifyTask(req, project, task) {
   return !!a && String(a._id || a) === String(req.user._id);
 }
 
-module.exports = { hasPermission, isProjectMember, canModifyTask };
+// Peut GÉRER un projet (édition, sprints, membres) : accès global (`project.manage.any`,
+// = admin) ou bien permission de gestion + être membre du projet (manager scopé à ses projets).
+function canManageProject(req, project) {
+  if (hasPermission(req, 'project.manage.any')) return true;
+  return hasPermission(req, 'project.manage') && isProjectMember(project, req.user._id);
+}
+
+// Peut CONSULTER un projet et ses indicateurs (capacité, dashboard, sprints) :
+// accès global (admin) ou membre du projet.
+function canAccessProject(req, project) {
+  if (hasPermission(req, 'project.manage.any')) return true;
+  return isProjectMember(project, req.user._id);
+}
+
+module.exports = { hasPermission, isProjectMember, canModifyTask, canManageProject, canAccessProject };

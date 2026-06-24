@@ -81,13 +81,13 @@ export default function TeamPage() {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h2 className="text-base font-semibold text-slate-900">Équipe du projet</h2>
         <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
-          {members.length} membres · {totalWeekly} h capacité/sem · {totalRealized} h réalisées
+          {members.length} membres · {totalWeekly} h capacité/sem · {totalRealized} h estimées (terminé)
         </span>
       </div>
 
       <p className="mb-4 text-sm text-slate-500">
-        Membres affectés à <span className="font-medium text-slate-700">{project.name}</span>. Le « Réalisé »
-        ne compte que les tâches terminées de ce projet.
+        Membres affectés à <span className="font-medium text-slate-700">{project.name}</span>. L'« Estimé (terminé) »
+        est la somme des estimations des tâches terminées de ce projet (pas un temps réellement saisi).
       </p>
 
       {/* Ajout d'un membre (manager/admin) */}
@@ -127,7 +127,7 @@ export default function TeamPage() {
                 <TableHead>Membre</TableHead>
                 <TableHead>Rôle sur le projet</TableHead>
                 <TableHead>Capacité/sem</TableHead>
-                <TableHead>Réalisé (projet)</TableHead>
+                <TableHead>Estimé (terminé)</TableHead>
                 {canManage && <TableHead></TableHead>}
               </TableRow>
             </TableHeader>

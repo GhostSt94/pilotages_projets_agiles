@@ -1,12 +1,13 @@
 const { Project, Sprint, Task, User } = require('../models');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
-const { isProjectMember, hasPermission } = require('../utils/authz');
+const { isProjectMember, hasPermission, canManageProject, canAccessProject } = require('../utils/authz');
 
 // GET /projects — admin/manager voient tout ; developer voit ses projets.
 const listProjects = asyncHandler(async (req, res) => {
+  // Accès global (admin) => tous ; sinon on ne voit que ses projets (membre).
   const filter = {};
-  if (!hasPermission(req, 'project.manage')) {
+  if (!hasPermission(req, 'project.manage.any')) {
     filter.members = req.user._id;
   }
   const projects = await Project.find(filter)
@@ -23,7 +24,7 @@ const getProject = asyncHandler(async (req, res) => {
     .populate('manager', 'name email');
   if (!project) throw ApiError.notFound('Projet introuvable.');
 
-  if (!hasPermission(req, 'project.manage') && !isProjectMember(project, req.user._id)) {
+  if (!canAccessProject(req, project)) {
     throw ApiError.forbidden('Vous n\'êtes pas membre de ce projet.');
   }
   res.json(project);
@@ -50,6 +51,7 @@ const createProject = asyncHandler(async (req, res) => {
 const updateProject = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) throw ApiError.notFound('Projet introuvable.');
+  if (!canManageProject(req, project)) throw ApiError.forbidden('Vous ne gérez pas ce projet.');
 
   const { name, key, description, status } = req.body;
   if (name !== undefined) project.name = name;
@@ -65,6 +67,7 @@ const updateProject = asyncHandler(async (req, res) => {
 const deleteProject = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) throw ApiError.notFound('Projet introuvable.');
+  if (!canManageProject(req, project)) throw ApiError.forbidden('Vous ne gérez pas ce projet.');
 
   await Promise.all([
     Task.deleteMany({ project: project._id }),
@@ -79,6 +82,7 @@ const deleteProject = asyncHandler(async (req, res) => {
 const addMember = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) throw ApiError.notFound('Projet introuvable.');
+  if (!canManageProject(req, project)) throw ApiError.forbidden('Vous ne gérez pas ce projet.');
 
   const { userId } = req.body;
   const user = await User.findById(userId);
@@ -98,6 +102,7 @@ const addMember = asyncHandler(async (req, res) => {
 const removeMember = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) throw ApiError.notFound('Projet introuvable.');
+  if (!canManageProject(req, project)) throw ApiError.forbidden('Vous ne gérez pas ce projet.');
 
   project.members = project.members.filter((m) => String(m) !== String(req.params.userId));
   await project.save();
@@ -111,7 +116,7 @@ const getBoard = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) throw ApiError.notFound('Projet introuvable.');
 
-  if (!hasPermission(req, 'project.manage') && !isProjectMember(project, req.user._id)) {
+  if (!canAccessProject(req, project)) {
     throw ApiError.forbidden('Vous n\'êtes pas membre de ce projet.');
   }
 
