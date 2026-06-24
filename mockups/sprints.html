@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadence — Sprints & capacité</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>body{font-family:'Inter',system-ui,sans-serif}</style>
+</head>
+<body class="h-screen overflow-hidden bg-slate-50 text-slate-800">
+  <div class="flex h-screen">
+    <div id="sidebar"></div>
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <div id="topbar"></div>
+
+      <div class="flex-1 overflow-y-auto p-6">
+        <div class="grid gap-6 lg:grid-cols-[320px_1fr]">
+
+          <!-- Liste des sprints -->
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <h2 class="text-base font-semibold text-slate-900">Sprints</h2>
+              <button class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"><i data-lucide="plus" class="h-4 w-4"></i> Nouveau</button>
+            </div>
+            <div id="sprint-list" class="space-y-2.5"></div>
+          </div>
+
+          <!-- Panneau capacité -->
+          <div>
+            <div class="mb-3 flex flex-wrap items-center gap-3">
+              <h2 class="text-base font-semibold text-slate-900">Sprint 1 — Catalogue &amp; Panier</h2>
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>actif</span>
+              <div class="ml-auto flex items-center gap-2">
+                <button onclick="toggleOverload()" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"><i data-lucide="flask-conical" class="h-4 w-4"></i> Simuler surcharge</button>
+                <button class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"><i data-lucide="flag-off" class="h-4 w-4"></i> Clôturer</button>
+              </div>
+            </div>
+
+            <!-- Bandeau synthèse -->
+            <div id="banner" class="rounded-xl border p-5"></div>
+
+            <!-- Détail par membre -->
+            <div class="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                <h3 class="text-sm font-semibold text-slate-900">Capacité par membre</h3>
+                <span class="text-xs text-slate-400">jours travaillés − congés approuvés × capacité/jour</span>
+              </div>
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th class="px-4 py-2.5 font-medium">Membre</th>
+                    <th class="px-4 py-2.5 font-medium">Cap./j</th>
+                    <th class="px-4 py-2.5 font-medium">J. travaillés</th>
+                    <th class="px-4 py-2.5 font-medium">J. congé</th>
+                    <th class="px-4 py-2.5 font-medium">J. dispo</th>
+                    <th class="px-4 py-2.5 font-medium text-right">Heures dispo</th>
+                  </tr>
+                </thead>
+                <tbody id="cap-rows" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+
+            <!-- Absences -->
+            <div class="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900"><i data-lucide="plane" class="h-4 w-4 text-indigo-500"></i> Absences sur la période</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2">
+                  ${''}
+                  <span class="grid h-6 w-6 place-items-center rounded-full bg-rose-100 text-[11px] font-semibold text-rose-700">SS</span>
+                  <span class="text-slate-700">Sara Salhi</span>
+                  <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Congé · vacances</span>
+                  <span class="ml-auto text-xs text-slate-500">18 → 19 juin · <strong>2 j décomptés</strong></span>
+                </div>
+                <p class="text-xs text-slate-400">Les congés <strong>approuvés</strong> qui chevauchent le sprint réduisent la capacité. Les demandes en attente n'ont aucun impact.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="shell.js"></script>
+  <script>
+    // Liste des sprints
+    const sprints = [
+      { name:'Sprint 1 — Catalogue & Panier', status:'active',    dates:'13 → 26 juin', goal:'Catalogue + panier de base', active:true },
+      { name:'Sprint 2 — Paiement',           status:'planned',   dates:'27 juin → 10 juil.', goal:'Paiement en ligne' },
+      { name:'Sprint 0 — Mise en place',      status:'completed', dates:'30 mai → 12 juin', goal:'Socle technique' },
+    ];
+    const sStyle = { active:'bg-emerald-100 text-emerald-700', planned:'bg-blue-100 text-blue-700', completed:'bg-slate-100 text-slate-500' };
+    const sLabel = { active:'actif', planned:'planifié', completed:'terminé' };
+    document.getElementById('sprint-list').innerHTML = sprints.map(s=>`
+      <div class="rounded-xl border ${s.active?'border-indigo-300 ring-1 ring-indigo-100':'border-slate-200'} bg-white p-3.5 cursor-pointer hover:border-indigo-300">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-semibold text-slate-800">${s.name}</span>
+          <span class="ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${sStyle[s.status]}">${sLabel[s.status]}</span>
+        </div>
+        <div class="mt-1.5 flex items-center gap-1 text-xs text-slate-400"><i data-lucide="calendar" class="h-3.5 w-3.5"></i> ${s.dates}</div>
+        <p class="mt-1 truncate text-xs text-slate-500">${s.goal}</p>
+        ${s.status==='planned'?`<button class="mt-2.5 inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-100"><i data-lucide="play" class="h-3.5 w-3.5"></i> Démarrer</button>`:''}
+      </div>`).join('');
+
+    // Capacité par membre
+    const caps = [
+      { name:'Mounia Manager', who:'MM', color:'indigo', cap:5, wd:10, leave:0, dispo:10, h:50 },
+      { name:'Driss Développeur', who:'DD', color:'sky', cap:6, wd:10, leave:0, dispo:10, h:60 },
+      { name:'Sara Salhi', who:'SS', color:'rose', cap:7, wd:10, leave:2, dispo:8, h:56 },
+      { name:'Yassine Younsi', who:'YY', color:'amber', cap:6, wd:8, leave:0, dispo:8, h:48 },
+    ];
+    document.getElementById('cap-rows').innerHTML = caps.map(c=>`
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3"><div class="flex items-center gap-2">${avatar(c.who,c.color)}<span class="font-medium text-slate-700">${c.name}</span></div></td>
+        <td class="px-4 py-3 text-slate-600">${c.cap} h</td>
+        <td class="px-4 py-3 text-slate-600">${c.wd}</td>
+        <td class="px-4 py-3 ${c.leave?'text-amber-600 font-medium':'text-slate-400'}">${c.leave}</td>
+        <td class="px-4 py-3 text-slate-600">${c.dispo}</td>
+        <td class="px-4 py-3 text-right font-semibold text-slate-800">${c.h} h</td>
+      </tr>`).join('') + `
+      <tr class="bg-slate-50 font-semibold">
+        <td class="px-4 py-3 text-slate-700" colspan="5">Total disponible</td>
+        <td class="px-4 py-3 text-right text-slate-900">214 h</td>
+      </tr>`;
+
+    // Bandeau synthèse — bascule OK / surcharge
+    let overload = false;
+    function banner() {
+      const committed = overload ? 348 : 48;
+      const avail = 214;
+      const pct = Math.round(committed/avail*100);
+      const isOver = committed > avail;
+      const el = document.getElementById('banner');
+      el.className = `rounded-xl border p-5 ${isOver?'border-red-200 bg-red-50':'border-slate-200 bg-white'}`;
+      el.innerHTML = `
+        <div class="flex flex-wrap items-center gap-4">
+          <div>
+            <div class="text-xs uppercase tracking-wide text-slate-400">Capacité disponible</div>
+            <div class="text-2xl font-bold text-slate-900">${avail} h</div>
+          </div>
+          <i data-lucide="${isOver?'arrow-right':'arrow-right'}" class="h-5 w-5 text-slate-300"></i>
+          <div>
+            <div class="text-xs uppercase tracking-wide text-slate-400">Charge engagée</div>
+            <div class="text-2xl font-bold ${isOver?'text-red-600':'text-slate-900'}">${committed} h</div>
+          </div>
+          <div class="ml-auto text-right">
+            ${isOver
+              ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-sm font-semibold text-white"><i data-lucide="alert-triangle" class="h-4 w-4"></i> SURCHARGE · +${committed-avail} h</span>`
+              : `<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700"><i data-lucide="check-circle-2" class="h-4 w-4"></i> Capacité OK</span>`}
+            <div class="mt-1 text-xs text-slate-400">${pct} % d'occupation</div>
+          </div>
+        </div>
+        <div class="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+          <div class="h-full rounded-full ${isOver?'bg-red-500':'bg-emerald-500'}" style="width:${Math.min(pct,100)}%"></div>
+        </div>
+        ${isOver?`<p class="mt-2 text-xs text-red-600">La charge dépasse la capacité de ${committed-avail} h. Retirez des tâches, réduisez les estimations ou reportez au prochain sprint.</p>`:`<p class="mt-2 text-xs text-slate-400">7 tâches engagées · 166 h restantes pour planifier.</p>`}
+      `;
+      lucide.createIcons();
+    }
+    function toggleOverload(){ overload = !overload; banner(); }
+
+    Shell.mount('sprints', 'Sprints & capacité', 'Atlas Retail');
+    banner();
+    lucide.createIcons();
+  </script>
+</body>
+</html>

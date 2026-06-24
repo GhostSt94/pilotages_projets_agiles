@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadence — Backlog & planification</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>body{font-family:'Inter',system-ui,sans-serif}</style>
+</head>
+<body class="h-screen overflow-hidden bg-slate-50 text-slate-800">
+  <div class="flex h-screen">
+    <div id="sidebar"></div>
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <div id="topbar"></div>
+
+      <div class="flex flex-1 gap-6 overflow-y-auto p-6">
+        <!-- Backlog -->
+        <div class="min-w-0 flex-1">
+          <div class="mb-4 flex items-center gap-3">
+            <h2 class="text-base font-semibold text-slate-900">Backlog</h2>
+            <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">3 tâches · 36 h</span>
+            <div class="ml-auto flex items-center gap-2">
+              <div class="relative hidden sm:block">
+                <i data-lucide="search" class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"></i>
+                <input placeholder="Rechercher…" class="w-48 rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              </div>
+              <button class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><i data-lucide="plus" class="h-4 w-4"></i> Tâche</button>
+            </div>
+          </div>
+
+          <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <table class="w-full text-sm">
+              <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th class="px-4 py-2.5 font-medium">Tâche</th>
+                  <th class="px-4 py-2.5 font-medium">Type</th>
+                  <th class="px-4 py-2.5 font-medium">Priorité</th>
+                  <th class="px-4 py-2.5 font-medium">Est.</th>
+                  <th class="px-4 py-2.5 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody id="rows" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+
+          <p class="mt-3 text-xs text-slate-400">Astuce : glissez une tâche vers le sprint, ou utilisez « Planifier ». L'encart de droite met à jour la capacité en direct.</p>
+        </div>
+
+        <!-- Encart planification capacité -->
+        <aside class="w-80 shrink-0 space-y-4">
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-slate-900">Planifier dans</h3>
+            </div>
+            <select class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500">
+              <option>Sprint 2 — Paiement (planned)</option>
+              <option>Sprint 1 — Catalogue &amp; Panier (active)</option>
+            </select>
+            <div class="mt-1 flex items-center gap-1 text-xs text-slate-400"><i data-lucide="calendar" class="h-3.5 w-3.5"></i> 27 juin → 10 juil.</div>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <h3 class="mb-3 text-sm font-semibold text-slate-900">Capacité du sprint cible</h3>
+            <div class="space-y-3">
+              <div>
+                <div class="mb-1 flex items-center justify-between text-xs">
+                  <span class="text-slate-500">Charge engagée</span>
+                  <span class="font-medium text-slate-700">28 h / 214 h</span>
+                </div>
+                <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div class="h-full rounded-full bg-emerald-500" style="width:13%"></div>
+                </div>
+                <div class="mt-1 text-[11px] text-emerald-600">13 % occupé · 186 h restantes</div>
+              </div>
+
+              <div class="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800">
+                <div class="flex items-center gap-1.5 font-medium"><i data-lucide="plus-circle" class="h-4 w-4"></i> Si vous ajoutez « Passerelle de paiement »</div>
+                <div class="mt-1">+16 h → 44 h / 214 h <span class="font-medium">(21 %)</span> — pas de surcharge.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <h3 class="mb-2 text-sm font-semibold text-slate-900">Aperçu équipe</h3>
+            <div id="cap-members" class="space-y-2.5 text-xs"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script src="shell.js"></script>
+  <script>
+    const backlog = [
+      { title:'Intégration passerelle de paiement', type:'feature', priority:'high', est:16 },
+      { title:'Compte client & historique de commandes', type:'feature', priority:'medium', est:12 },
+      { title:'Mise en place CI/CD', type:'tech', priority:'medium', est:8 },
+    ];
+    document.getElementById('rows').innerHTML = backlog.map(t=>{
+      const ty = TYPE[t.type];
+      return `<tr class="hover:bg-slate-50">
+        <td class="px-4 py-3 font-medium text-slate-800">${t.title}</td>
+        <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs ${ty.cls}"><i data-lucide="${ty.icon}" class="h-3.5 w-3.5"></i>${ty.label}</span></td>
+        <td class="px-4 py-3">${priorityTag(t.priority)}</td>
+        <td class="px-4 py-3 text-slate-600">${t.est} h</td>
+        <td class="px-4 py-3 text-right">
+          <button class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600"><i data-lucide="arrow-right-to-line" class="h-3.5 w-3.5"></i> Planifier</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const members = [
+      { name:'Mounia Manager', who:'MM', color:'indigo', dispo:50 },
+      { name:'Driss Développeur', who:'DD', color:'sky', dispo:60 },
+      { name:'Sara Salhi', who:'SS', color:'rose', dispo:56, note:'−2 j congé' },
+      { name:'Yassine Younsi', who:'YY', color:'amber', dispo:48, note:'sem. 4 j' },
+    ];
+    document.getElementById('cap-members').innerHTML = members.map(m=>`
+      <div class="flex items-center gap-2">
+        ${avatar(m.who, m.color)}
+        <span class="truncate text-slate-700">${m.name}</span>
+        ${m.note?`<span class="rounded bg-amber-50 px-1.5 text-[10px] text-amber-700">${m.note}</span>`:''}
+        <span class="ml-auto font-medium text-slate-600">${m.dispo} h</span>
+      </div>`).join('');
+
+    Shell.mount('backlog', 'Backlog & planification', 'Atlas Retail');
+    lucide.createIcons();
+  </script>
+</body>
+</html>

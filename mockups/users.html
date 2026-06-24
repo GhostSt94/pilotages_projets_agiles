@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadence — Utilisateurs (admin)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>body{font-family:'Inter',system-ui,sans-serif}</style>
+</head>
+<body class="h-screen overflow-hidden bg-slate-50 text-slate-800">
+  <div class="flex h-screen">
+    <div id="sidebar"></div>
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <div id="topbar"></div>
+
+      <div class="flex-1 overflow-y-auto p-6">
+        <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <!-- Table utilisateurs -->
+          <div>
+            <div class="mb-3 flex items-center gap-3">
+              <h2 class="text-base font-semibold text-slate-900">Utilisateurs</h2>
+              <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">5</span>
+              <select class="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-indigo-500">
+                <option>Tous les rôles</option><option>developer</option><option>manager</option><option>admin</option>
+              </select>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table class="w-full text-sm">
+                <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th class="px-4 py-2.5 font-medium">Utilisateur</th>
+                    <th class="px-4 py-2.5 font-medium">Rôle</th>
+                    <th class="px-4 py-2.5 font-medium">Cap./j</th>
+                    <th class="px-4 py-2.5 font-medium">Jours travaillés</th>
+                    <th class="px-4 py-2.5 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody id="urows" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Panneau d'édition -->
+          <aside>
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+              <div class="flex items-center gap-3">
+                <span class="grid h-10 w-10 place-items-center rounded-full bg-amber-100 text-sm font-semibold text-amber-700">YY</span>
+                <div>
+                  <div class="font-semibold text-slate-900">Yassine Younsi</div>
+                  <div class="text-xs text-slate-400">dev3@devox.ma</div>
+                </div>
+              </div>
+
+              <div class="mt-5 space-y-4">
+                <div>
+                  <label class="mb-1 block text-xs font-medium text-slate-600">Rôle</label>
+                  <select class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                    <option selected>developer</option><option>manager</option><option>admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="mb-1 block text-xs font-medium text-slate-600">Capacité quotidienne (heures)</label>
+                  <input type="number" value="6" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500" />
+                  <p class="mt-1 text-[11px] text-slate-400">Unité = heures (cohérent avec l'estimation des tâches).</p>
+                </div>
+
+                <div>
+                  <label class="mb-1.5 block text-xs font-medium text-slate-600">Jours travaillés</label>
+                  <div id="days" class="grid grid-cols-7 gap-1"></div>
+                  <p class="mt-1.5 text-[11px] text-slate-400">Sert au calcul de capacité des sprints. Ici : semaine de 4 jours (lun–jeu).</p>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                  <button class="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Enregistrer</button>
+                  <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuler</button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="shell.js"></script>
+  <script>
+    const users = [
+      { name:'Amine Admin', who:'AA', color:'indigo', email:'admin@devox.ma', role:'admin', cap:6, days:[1,2,3,4,5] },
+      { name:'Mounia Manager', who:'MM', color:'indigo', email:'manager@devox.ma', role:'manager', cap:5, days:[1,2,3,4,5] },
+      { name:'Driss Développeur', who:'DD', color:'sky', email:'dev1@devox.ma', role:'developer', cap:6, days:[1,2,3,4,5] },
+      { name:'Sara Salhi', who:'SS', color:'rose', email:'dev2@devox.ma', role:'developer', cap:7, days:[1,2,3,4,5] },
+      { name:'Yassine Younsi', who:'YY', color:'amber', email:'dev3@devox.ma', role:'developer', cap:6, days:[1,2,3,4], sel:true },
+    ];
+    const roleStyle = { manager:'bg-indigo-100 text-indigo-700', admin:'bg-violet-100 text-violet-700', developer:'bg-slate-100 text-slate-600' };
+    const DAYS = ['D','L','M','M','J','V','S']; // index 0=dim … 6=sam
+    function daysMini(arr){
+      return [1,2,3,4,5,6,0].map(i=>{
+        const on = arr.includes(i);
+        return `<span class="grid h-5 w-5 place-items-center rounded text-[10px] font-medium ${on?'bg-indigo-100 text-indigo-700':'bg-slate-100 text-slate-300'}">${DAYS[i]}</span>`;
+      }).join('');
+    }
+    document.getElementById('urows').innerHTML = users.map(u=>`
+      <tr class="${u.sel?'bg-indigo-50/40':''} hover:bg-slate-50">
+        <td class="px-4 py-3"><div class="flex items-center gap-2.5">${avatar(u.who,u.color,8)}<div><div class="font-medium text-slate-800">${u.name}</div><div class="text-xs text-slate-400">${u.email}</div></div></div></td>
+        <td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-[11px] font-medium ${roleStyle[u.role]}">${u.role}</span></td>
+        <td class="px-4 py-3 text-slate-600">${u.cap} h</td>
+        <td class="px-4 py-3"><div class="flex gap-1">${daysMini(u.days)}</div></td>
+        <td class="px-4 py-3 text-right"><button class="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100"><i data-lucide="pencil" class="h-4 w-4"></i></button></td>
+      </tr>`).join('');
+
+    // Sélecteur de jours dans le panneau (lun–jeu sélectionnés)
+    const sel = [1,2,3,4];
+    document.getElementById('days').innerHTML = [1,2,3,4,5,6,0].map(i=>{
+      const on = sel.includes(i);
+      return `<button class="rounded-lg border py-2 text-xs font-medium ${on?'border-indigo-300 bg-indigo-50 text-indigo-700':'border-slate-200 text-slate-400'}">${DAYS[i]}</button>`;
+    }).join('');
+
+    Shell.mount('users', 'Utilisateurs', 'Administration · rôles & capacité');
+    lucide.createIcons();
+  </script>
+</body>
+</html>

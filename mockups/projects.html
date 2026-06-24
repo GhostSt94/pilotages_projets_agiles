@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadence — Projets</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>body{font-family:'Inter',system-ui,sans-serif}</style>
+</head>
+<body class="h-screen overflow-hidden bg-slate-50 text-slate-800">
+  <div class="flex h-screen">
+    <div id="sidebar"></div>
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <div id="topbar"></div>
+
+      <div class="flex-1 overflow-y-auto p-6">
+        <div class="mb-5 flex items-center gap-3">
+          <h2 class="text-base font-semibold text-slate-900">Projets</h2>
+          <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">2</span>
+          <button class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><i data-lucide="plus" class="h-4 w-4"></i> Nouveau projet</button>
+        </div>
+
+        <div id="projects" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+        <!-- Détail (panneau membres) -->
+        <div class="mt-8">
+          <h3 class="mb-3 text-sm font-semibold text-slate-900">Atlas Retail — Membres</h3>
+          <div class="rounded-xl border border-slate-200 bg-white">
+            <div class="flex items-center gap-3 border-b border-slate-200 p-4">
+              <div class="relative flex-1 max-w-xs">
+                <i data-lucide="user-plus" class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"></i>
+                <input placeholder="Ajouter un membre…" class="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              </div>
+              <button class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Ajouter</button>
+            </div>
+            <div id="members" class="divide-y divide-slate-100"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="shell.js"></script>
+  <script>
+    const projects = [
+      { name:'Atlas Retail', key:'ATLAS', desc:'Plateforme e-commerce pour un client retail.', status:'active', members:4, sprints:3, manager:'Mounia Manager' },
+      { name:'Nova Mobile', key:'NOVA', desc:'Application mobile de fidélité (à cadrer).', status:'archived', members:2, sprints:0, manager:'Amine Admin' },
+    ];
+    const pStyle = { active:'bg-emerald-100 text-emerald-700', archived:'bg-slate-100 text-slate-500' };
+    const pLabel = { active:'actif', archived:'archivé' };
+    document.getElementById('projects').innerHTML = projects.map(p=>`
+      <div class="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-indigo-300 hover:shadow-sm">
+        <div class="flex items-center gap-2">
+          <div class="grid h-9 w-9 place-items-center rounded-lg bg-indigo-50 text-sm font-bold text-indigo-600">${p.key.slice(0,2)}</div>
+          <div>
+            <div class="font-semibold text-slate-900">${p.name}</div>
+            <span class="rounded bg-slate-100 px-1.5 text-[11px] font-mono text-slate-500">${p.key}</span>
+          </div>
+          <span class="ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${pStyle[p.status]}">${pLabel[p.status]}</span>
+        </div>
+        <p class="mt-3 text-sm text-slate-500 line-clamp-2">${p.desc}</p>
+        <div class="mt-4 flex items-center gap-4 text-xs text-slate-400">
+          <span class="inline-flex items-center gap-1"><i data-lucide="users" class="h-3.5 w-3.5"></i>${p.members}</span>
+          <span class="inline-flex items-center gap-1"><i data-lucide="gauge" class="h-3.5 w-3.5"></i>${p.sprints} sprints</span>
+          <span class="inline-flex items-center gap-1"><i data-lucide="user" class="h-3.5 w-3.5"></i>${p.manager}</span>
+        </div>
+        <div class="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3">
+          <a href="board.html" class="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline">Ouvrir <i data-lucide="arrow-right" class="h-4 w-4"></i></a>
+          <button class="ml-auto grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100"><i data-lucide="pencil" class="h-4 w-4"></i></button>
+          <button class="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+        </div>
+      </div>`).join('');
+
+    const members = [
+      { name:'Mounia Manager', who:'MM', color:'indigo', role:'manager', email:'manager@devox.ma' },
+      { name:'Driss Développeur', who:'DD', color:'sky', role:'developer', email:'dev1@devox.ma' },
+      { name:'Sara Salhi', who:'SS', color:'rose', role:'developer', email:'dev2@devox.ma' },
+      { name:'Yassine Younsi', who:'YY', color:'amber', role:'developer', email:'dev3@devox.ma' },
+    ];
+    const roleStyle = { manager:'bg-indigo-100 text-indigo-700', admin:'bg-violet-100 text-violet-700', developer:'bg-slate-100 text-slate-600' };
+    document.getElementById('members').innerHTML = members.map(m=>`
+      <div class="flex items-center gap-3 p-3.5">
+        ${avatar(m.who, m.color, 8)}
+        <div class="min-w-0">
+          <div class="text-sm font-medium text-slate-800">${m.name}</div>
+          <div class="text-xs text-slate-400">${m.email}</div>
+        </div>
+        <span class="ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${roleStyle[m.role]}">${m.role}</span>
+        <button class="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"><i data-lucide="user-minus" class="h-4 w-4"></i></button>
+      </div>`).join('');
+
+    Shell.mount('projects', 'Projets', 'Gestion des projets et des membres');
+    lucide.createIcons();
+  </script>
+</body>
+</html>
