@@ -4,6 +4,7 @@ import { Check, X, Inbox, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePageHeader } from '@/components/layout/AppShell';
 import { useAuth, can } from '@/lib/auth';
 import { useLeaves, useApproveLeave, useRejectLeave } from '@/hooks/useLeaves';
+import { useUsers } from '@/hooks/useUsers';
 import { apiError } from '@/lib/api';
 import { formatRange, formatDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
@@ -26,8 +27,12 @@ export default function LeavesPage() {
   usePageHeader('Congés & calendrier', manager ? 'Disponibilités et validation de l\'équipe' : 'Mes congés');
 
   const { data: leaves = [], isLoading, isError, error, refetch } = useLeaves();
+  const { data: allUsers = [] } = useUsers({}, { enabled: manager });
   const approve = useApproveLeave();
   const reject = useRejectLeave();
+
+  // Lignes du calendrier : tous les utilisateurs pour un valideur, sinon moi seul.
+  const calendarMembers = manager ? allUsers : user ? [user] : [];
 
   const [formOpen, setFormOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -68,7 +73,7 @@ export default function LeavesPage() {
       </div>
 
       {/* Calendrier en vedette */}
-      <TeamCalendar leaves={leaves} />
+      <TeamCalendar leaves={leaves} members={calendarMembers} />
 
       {/* Listes */}
       <div className={cn('grid gap-6', manager && 'lg:grid-cols-2')}>
