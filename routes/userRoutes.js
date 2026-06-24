@@ -28,7 +28,6 @@ router.post(
     body('role').optional().isString(),
     body('dailyCapacityHours').optional().isFloat({ min: 0 }),
     body('workingDays').optional().isArray(),
-    body('team').optional().isString(),
   ],
   validate,
   createUser

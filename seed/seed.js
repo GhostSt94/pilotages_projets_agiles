@@ -50,7 +50,6 @@ async function run() {
     role: 'admin',
     dailyCapacityHours: 6,
     workingDays: [1, 2, 3, 4, 5],
-    team: 'Direction technique',
   });
 
   const manager = await makeUser({
@@ -60,7 +59,6 @@ async function run() {
     role: 'manager',
     dailyCapacityHours: 5,
     workingDays: [1, 2, 3, 4, 5],
-    team: 'Atlas',
   });
 
   const dev1 = await makeUser({
@@ -70,7 +68,6 @@ async function run() {
     role: 'developer',
     dailyCapacityHours: 6,
     workingDays: [1, 2, 3, 4, 5],
-    team: 'Atlas',
   });
 
   const dev2 = await makeUser({
@@ -80,7 +77,6 @@ async function run() {
     role: 'developer',
     dailyCapacityHours: 7,
     workingDays: [1, 2, 3, 4, 5],
-    team: 'Atlas',
   });
 
   const dev3 = await makeUser({
@@ -90,7 +86,6 @@ async function run() {
     role: 'developer',
     dailyCapacityHours: 6,
     workingDays: [1, 2, 3, 4], // travaille 4 jours/semaine
-    team: 'Atlas',
   });
 
   // eslint-disable-next-line no-console

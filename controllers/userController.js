@@ -25,7 +25,7 @@ const listUsers = asyncHandler(async (req, res) => {
 
 // POST /users  (admin) — création d'un utilisateur avec rôle et capacité.
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, dailyCapacityHours, workingDays, team } = req.body;
+  const { name, email, password, role, dailyCapacityHours, workingDays } = req.body;
 
   const exists = await User.findOne({ email: email.toLowerCase() });
   if (exists) throw ApiError.conflict('Un compte existe déjà avec cet email.');
@@ -38,24 +38,22 @@ const createUser = asyncHandler(async (req, res) => {
     password, // virtuel -> hash (hook pre-validate)
     ...(dailyCapacityHours !== undefined ? { dailyCapacityHours } : {}),
     ...(workingDays !== undefined ? { workingDays } : {}),
-    ...(team !== undefined ? { team } : {}),
   });
   await user.save();
   res.status(201).json(user);
 });
 
-// PATCH /users/:id  (admin) — capacité, jours travaillés, rôle, équipe.
+// PATCH /users/:id  (admin) — capacité, jours travaillés, rôle, nom.
 const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) throw ApiError.notFound('Utilisateur introuvable.');
 
-  const { dailyCapacityHours, workingDays, role, name, team } = req.body;
+  const { dailyCapacityHours, workingDays, role, name } = req.body;
   await assertRoleExists(role);
   if (dailyCapacityHours !== undefined) user.dailyCapacityHours = dailyCapacityHours;
   if (workingDays !== undefined) user.workingDays = workingDays;
   if (role !== undefined) user.role = role;
   if (name !== undefined) user.name = name;
-  if (team !== undefined) user.team = team;
 
   await user.save();
   res.json(user);

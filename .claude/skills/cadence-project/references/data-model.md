@@ -8,7 +8,6 @@ Comptes, rôles et paramètres de capacité.
 - `role` : `developer` | `manager` | `admin`
 - `dailyCapacityHours` (ex. 7) — capacité par jour travaillé
 - `workingDays` : tableau d'entiers (1 = lundi … 5 = vendredi)
-- `team` (optionnel)
 
 ## projects
 - `name`, `key` (ex. « ATL »), `description`

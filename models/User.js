@@ -29,8 +29,6 @@ const userSchema = new mongoose.Schema(
         message: 'workingDays doit contenir des entiers entre 0 (dim.) et 6 (sam.).',
       },
     },
-
-    team: { type: String, trim: true, default: null },
   },
   { timestamps: true }
 );
