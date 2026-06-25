@@ -1,4 +1,5 @@
 const { Notification, Role, User } = require('../models');
+const { emitToUser } = require('../realtime');
 
 /**
  * Crée des notifications pour un ou plusieurs destinataires.
@@ -23,7 +24,11 @@ async function notify({ users = [], type, title, body = '', link = '', exclude =
       seen.add(id);
       docs.push({ user: id, type, title, body, link });
     }
-    if (docs.length) await Notification.insertMany(docs);
+    if (docs.length) {
+      await Notification.insertMany(docs);
+      // Pousse la notification en temps réel à chaque destinataire (cloche instantanée).
+      for (const d of docs) emitToUser(d.user, 'notification:new', { title });
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[notify] échec de création de notification :', err.message);

@@ -4,6 +4,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { computeSprintCapacity } = require('../services/capacityService');
 const { canManageProject, canAccessProject } = require('../utils/authz');
 const { notify } = require('../services/notificationService');
+const { emitToProject } = require('../realtime');
 
 // Charge un sprint et son projet (pour les contrôles d'accès scopés).
 async function loadSprintWithProject(sprintId) {
@@ -34,6 +35,7 @@ const createSprint = asyncHandler(async (req, res) => {
     endDate,
     status: 'planned',
   });
+  emitToProject(sprint.project, 'sprint:changed');
   res.status(201).json(sprint);
 });
 
@@ -82,6 +84,7 @@ const startSprint = asyncHandler(async (req, res) => {
     exclude: req.user._id,
   });
 
+  emitToProject(sprint.project, 'sprint:changed');
   res.json(sprint);
 });
 
@@ -102,6 +105,7 @@ const completeSprint = asyncHandler(async (req, res) => {
     sprint: sprint._id,
     status: { $ne: 'done' },
   });
+  emitToProject(sprint.project, 'sprint:changed');
   res.json({ sprint, unfinishedTasks: unfinished });
 });
 
@@ -121,6 +125,7 @@ const updateSprint = asyncHandler(async (req, res) => {
   }
 
   await sprint.save();
+  emitToProject(sprint.project, 'sprint:changed');
   res.json(sprint);
 });
 

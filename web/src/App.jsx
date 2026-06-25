@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute, RoleRoute } from '@/components/layout/ProtectedRoute';
 import { AppShell } from '@/components/layout/AppShell';
 import { ProjectProvider } from '@/lib/project';
+import { RealtimeBridge } from '@/lib/RealtimeBridge';
 import { PageLoader } from '@/components/common/states';
 
 // Pages d'auth chargées normalement (petites, hors du shell).
@@ -28,6 +29,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ProjectProvider>
+              <RealtimeBridge />
               <AppShell />
             </ProjectProvider>
           </ProtectedRoute>

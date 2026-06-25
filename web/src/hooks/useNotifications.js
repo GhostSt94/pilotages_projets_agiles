@@ -10,12 +10,13 @@ export function useNotifications(params = {}, options = {}) {
   });
 }
 
-// Compteur de non-lues — rafraîchi régulièrement pour la pastille de la cloche.
+// Compteur de non-lues. Mise à jour surtout en temps réel (Socket.io) ; le polling
+// long ne sert que de filet de sécurité (reconnexion, onglet en arrière-plan).
 export function useUnreadCount() {
   return useQuery({
     queryKey: ['notifications-count'],
     queryFn: async () => (await api.get('/notifications/count')).data,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
     refetchOnWindowFocus: true,
   });
 }

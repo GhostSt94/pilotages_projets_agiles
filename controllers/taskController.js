@@ -6,6 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { canModifyTask, isProjectMember, hasPermission } = require('../utils/authz');
 const { UPLOAD_DIR } = require('../middlewares/upload');
 const { notify } = require('../services/notificationService');
+const { emitToProject } = require('../realtime');
 
 // Vérifie qu'un sprint (s'il est fourni) appartient bien au projet.
 async function assertSprintBelongsToProject(sprintId, projectId) {
@@ -104,6 +105,7 @@ const createTask = asyncHandler(async (req, res) => {
     });
   }
 
+  emitToProject(task.project, 'task:changed');
   res.status(201).json(task);
 });
 
@@ -153,6 +155,7 @@ const updateTask = asyncHandler(async (req, res) => {
     });
   }
 
+  emitToProject(task.project, 'task:changed');
   res.json(task);
 });
 
@@ -169,6 +172,7 @@ const moveTask = asyncHandler(async (req, res) => {
   if (order !== undefined) task.order = order;
 
   await task.save();
+  emitToProject(task.project, 'task:changed');
   res.json(task);
 });
 
@@ -176,6 +180,7 @@ const moveTask = asyncHandler(async (req, res) => {
 const deleteTask = asyncHandler(async (req, res) => {
   const { task } = await loadTaskForModify(req);
   await task.deleteOne();
+  emitToProject(task.project, 'task:changed');
   res.json({ deleted: true, id: task._id });
 });
 
@@ -185,6 +190,7 @@ const addComment = asyncHandler(async (req, res) => {
   task.comments.push({ author: req.user._id, body: req.body.body });
   await task.save();
   const populated = await task.populate('comments.author', 'name email');
+  emitToProject(task.project, 'task:changed');
   res.status(201).json(populated);
 });
 
@@ -200,6 +206,7 @@ const addTimeLog = asyncHandler(async (req, res) => {
   });
   await task.save();
   const populated = await task.populate('timeLogs.user', 'name email');
+  emitToProject(task.project, 'task:changed');
   res.status(201).json(populated);
 });
 
@@ -214,6 +221,7 @@ const removeTimeLog = asyncHandler(async (req, res) => {
   }
   task.timeLogs.pull(req.params.logId);
   await task.save();
+  emitToProject(task.project, 'task:changed');
   res.json({ deleted: true, id: req.params.logId });
 });
 
@@ -231,6 +239,7 @@ const addAttachment = asyncHandler(async (req, res) => {
   });
   await task.save();
   const populated = await task.populate('attachments.uploadedBy', 'name');
+  emitToProject(task.project, 'task:changed');
   res.status(201).json(populated);
 });
 
@@ -243,6 +252,7 @@ const removeAttachment = asyncHandler(async (req, res) => {
   fs.unlink(path.join(UPLOAD_DIR, att.filename), () => {});
   task.attachments.pull(req.params.attachmentId);
   await task.save();
+  emitToProject(task.project, 'task:changed');
   res.json({ deleted: true, id: req.params.attachmentId });
 });
 
