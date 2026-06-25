@@ -7,4 +7,5 @@ module.exports = {
   Leave: require('./Leave'),
   Role: require('./Role'),
   Notification: require('./Notification'),
+  ActivityLog: require('./ActivityLog'),
 };

@@ -8,7 +8,7 @@
  */
 const mongoose = require('mongoose');
 const { connectDB, disconnectDB } = require('../config/db');
-const { User, Project, Sprint, Task, Leave, Notification } = require('../models');
+const { User, Project, Sprint, Task, Leave, Notification, ActivityLog } = require('../models');
 const { ensureDefaultRoles } = require('../services/roleService');
 
 // Dates relatives à aujourd'hui pour que le sprint soit toujours "en cours".
@@ -33,6 +33,7 @@ async function run() {
     Task.deleteMany({}),
     Leave.deleteMany({}),
     Notification.deleteMany({}),
+    ActivityLog.deleteMany({}),
   ]);
 
   // --- Utilisateurs ---
@@ -183,7 +184,7 @@ async function run() {
 
   // --- Congés ---
   // dev2 : 2 jours approuvés pendant le sprint actif -> réduit la capacité.
-  await Leave.create({
+  const dev2Leave = await Leave.create({
     user: dev2._id,
     type: 'vacation',
     startDate: dayOffset(2),
@@ -218,6 +219,17 @@ async function run() {
 
   // eslint-disable-next-line no-console
   console.log('[seed] Congés créés.');
+
+  // --- Journal d'activité (quelques entrées de démo) ---
+  await ActivityLog.create([
+    { actor: manager._id, action: 'project.create', entityType: 'project', entityId: project._id, project: project._id, summary: `a créé le projet « ${project.name} »` },
+    { actor: manager._id, action: 'sprint.start', entityType: 'sprint', entityId: sprint._id, project: project._id, summary: `a démarré le sprint « ${sprint.name} »` },
+    { actor: dev1._id, action: 'task.create', entityType: 'task', project: project._id, summary: `a créé ${project.key}-1 « Page liste des produits »` },
+    { actor: manager._id, action: 'leave.approve', entityType: 'leave', entityId: dev2Leave._id, summary: `a approuvé le congé de ${dev2.name}` },
+  ]);
+
+  // eslint-disable-next-line no-console
+  console.log('[seed] Journal d\'activité créé.');
 
   // --- Récapitulatif ---
   // eslint-disable-next-line no-console

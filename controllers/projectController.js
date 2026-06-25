@@ -2,6 +2,7 @@ const { Project, Sprint, Task, User } = require('../models');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { isProjectMember, hasPermission, canManageProject, canAccessProject } = require('../utils/authz');
+const { logActivity } = require('../services/activityService');
 
 // GET /projects — admin/manager voient tout ; developer voit ses projets.
 const listProjects = asyncHandler(async (req, res) => {
@@ -44,6 +45,10 @@ const createProject = asyncHandler(async (req, res) => {
   });
 
   const populated = await project.populate('members', 'name email role');
+  logActivity({
+    actor: req.user._id, action: 'project.create', entityType: 'project', entityId: project._id, project: project._id,
+    summary: `a créé le projet « ${project.name} »`,
+  });
   res.status(201).json(populated);
 });
 
@@ -60,6 +65,10 @@ const updateProject = asyncHandler(async (req, res) => {
   if (status !== undefined) project.status = status;
 
   await project.save();
+  logActivity({
+    actor: req.user._id, action: 'project.update', entityType: 'project', entityId: project._id, project: project._id,
+    summary: `a modifié le projet « ${project.name} »`,
+  });
   res.json(project);
 });
 
@@ -94,6 +103,11 @@ const addMember = asyncHandler(async (req, res) => {
   project.members.push(userId);
   await project.save();
 
+  logActivity({
+    actor: req.user._id, action: 'member.add', entityType: 'project', entityId: project._id, project: project._id,
+    summary: `a ajouté ${user.name} au projet « ${project.name} »`,
+  });
+
   const populated = await project.populate('members', 'name email role');
   res.json(populated);
 });
@@ -106,6 +120,12 @@ const removeMember = asyncHandler(async (req, res) => {
 
   project.members = project.members.filter((m) => String(m) !== String(req.params.userId));
   await project.save();
+
+  const removed = await User.findById(req.params.userId).select('name');
+  logActivity({
+    actor: req.user._id, action: 'member.remove', entityType: 'project', entityId: project._id, project: project._id,
+    summary: `a retiré ${removed?.name || 'un membre'} du projet « ${project.name} »`,
+  });
 
   const populated = await project.populate('members', 'name email role');
   res.json(populated);

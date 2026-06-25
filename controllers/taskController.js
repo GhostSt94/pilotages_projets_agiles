@@ -7,6 +7,7 @@ const { canModifyTask, isProjectMember, hasPermission } = require('../utils/auth
 const { UPLOAD_DIR } = require('../middlewares/upload');
 const { notify } = require('../services/notificationService');
 const { emitToProject } = require('../realtime');
+const { logActivity, statusLabel, taskCode } = require('../services/activityService');
 
 // Vérifie qu'un sprint (s'il est fourni) appartient bien au projet.
 async function assertSprintBelongsToProject(sprintId, projectId) {
@@ -106,6 +107,10 @@ const createTask = asyncHandler(async (req, res) => {
   }
 
   emitToProject(task.project, 'task:changed');
+  logActivity({
+    actor: req.user._id, action: 'task.create', entityType: 'task', entityId: task._id, project: proj._id,
+    summary: `a créé ${taskCode(proj, task)} « ${task.title} »`,
+  });
   res.status(201).json(task);
 });
 
@@ -123,7 +128,7 @@ async function loadTaskForModify(req) {
 
 // PATCH /tasks/:id
 const updateTask = asyncHandler(async (req, res) => {
-  const { task } = await loadTaskForModify(req);
+  const { task, project } = await loadTaskForModify(req);
   const prevAssignee = String(task.assignee || '');
 
   const { title, description, type, estimate, priority, assignee, labels, status, sprint } = req.body;
@@ -156,12 +161,16 @@ const updateTask = asyncHandler(async (req, res) => {
   }
 
   emitToProject(task.project, 'task:changed');
+  logActivity({
+    actor: req.user._id, action: 'task.update', entityType: 'task', entityId: task._id, project: project._id,
+    summary: `a modifié ${taskCode(project, task)} « ${task.title} »`,
+  });
   res.json(task);
 });
 
 // PATCH /tasks/:id/move — déplacer (statut / sprint / ordre) pour le Kanban.
 const moveTask = asyncHandler(async (req, res) => {
-  const { task } = await loadTaskForModify(req);
+  const { task, project } = await loadTaskForModify(req);
   const { status, sprint, order } = req.body;
 
   if (sprint !== undefined) {
@@ -173,14 +182,24 @@ const moveTask = asyncHandler(async (req, res) => {
 
   await task.save();
   emitToProject(task.project, 'task:changed');
+  logActivity({
+    actor: req.user._id, action: 'task.move', entityType: 'task', entityId: task._id, project: project._id,
+    summary: status !== undefined
+      ? `a déplacé ${taskCode(project, task)} → ${statusLabel(task.status)}`
+      : `a déplacé ${taskCode(project, task)}`,
+  });
   res.json(task);
 });
 
 // DELETE /tasks/:id
 const deleteTask = asyncHandler(async (req, res) => {
-  const { task } = await loadTaskForModify(req);
+  const { task, project } = await loadTaskForModify(req);
   await task.deleteOne();
   emitToProject(task.project, 'task:changed');
+  logActivity({
+    actor: req.user._id, action: 'task.delete', entityType: 'task', entityId: task._id, project: project._id,
+    summary: `a supprimé ${taskCode(project, task)} « ${task.title} »`,
+  });
   res.json({ deleted: true, id: task._id });
 });
 

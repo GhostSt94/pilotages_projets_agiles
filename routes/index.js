@@ -11,5 +11,6 @@ router.use('/leaves', require('./leaveRoutes'));
 router.use('/dashboard', require('./dashboardRoutes'));
 router.use('/roles', require('./roleRoutes'));
 router.use('/notifications', require('./notificationRoutes'));
+router.use('/activity', require('./activityRoutes'));
 
 module.exports = router;

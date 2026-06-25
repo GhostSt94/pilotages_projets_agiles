@@ -33,10 +33,22 @@ async function ensureDefaultRoles() {
     const existing = await Role.findOne({ name: def.name });
     if (!existing) {
       await Role.create({ ...def, isSystem: true });
-    } else if (!existing.isSystem) {
-      existing.isSystem = true;
-      await existing.save();
+      continue;
     }
+    // Réconciliation non destructive : marque comme système et ajoute les permissions
+    // manquantes de la définition (pour propager les nouvelles clés sans retirer les
+    // personnalisations de l'admin).
+    let dirty = false;
+    if (!existing.isSystem) {
+      existing.isSystem = true;
+      dirty = true;
+    }
+    const missing = def.permissions.filter((p) => !existing.permissions.includes(p));
+    if (missing.length) {
+      existing.permissions = [...existing.permissions, ...missing];
+      dirty = true;
+    }
+    if (dirty) await existing.save();
   }
   invalidateRolesCache();
 }

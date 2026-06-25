@@ -4,6 +4,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { hasPermission } = require('../utils/authz');
 const { notify, usersWithPermission } = require('../services/notificationService');
 const { wantsPagination, parsePageParams, paginated } = require('../utils/pagination');
+const { logActivity } = require('../services/activityService');
 
 // Format court d'une période (ex. « 02/06 → 06/06 »).
 function shortRange(start, end) {
@@ -54,6 +55,15 @@ const createLeave = asyncHandler(async (req, res) => {
       exclude: req.user._id,
     });
   }
+
+  const isSelf = String(targetUser) === String(req.user._id);
+  await leave.populate('user', 'name');
+  logActivity({
+    actor: req.user._id, action: 'leave.request', entityType: 'leave', entityId: leave._id,
+    summary: isSelf
+      ? `a ${autoApprove ? 'enregistré un congé approuvé' : 'déposé une demande de congé'} (${shortRange(startDate, endDate)})`
+      : `a enregistré un congé pour ${leave.user?.name || 'un membre'} (${shortRange(startDate, endDate)})`,
+  });
 
   res.status(201).json(leave);
 });
@@ -111,6 +121,13 @@ async function review(req, res, nextStatus) {
     body: `Votre congé du ${shortRange(leave.startDate, leave.endDate)} a été ${nextStatus === 'approved' ? 'approuvé' : 'refusé'} par ${req.user.name}.`,
     link: '/leaves',
     exclude: req.user._id,
+  });
+
+  await leave.populate('user', 'name');
+  logActivity({
+    actor: req.user._id, action: nextStatus === 'approved' ? 'leave.approve' : 'leave.reject',
+    entityType: 'leave', entityId: leave._id,
+    summary: `a ${nextStatus === 'approved' ? 'approuvé' : 'refusé'} le congé de ${leave.user?.name || 'un membre'} (${shortRange(leave.startDate, leave.endDate)})`,
   });
 
   res.json(leave);

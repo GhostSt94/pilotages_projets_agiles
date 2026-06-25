@@ -3,6 +3,7 @@ const { User, Task, Role } = require('../models');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { escapeRegex, wantsPagination, parsePageParams, paginated } = require('../utils/pagination');
+const { logActivity } = require('../services/activityService');
 
 // Vérifie qu'un nom de rôle existe (validation applicative, rôles dynamiques).
 async function assertRoleExists(role) {
@@ -57,6 +58,10 @@ const createUser = asyncHandler(async (req, res) => {
     ...(workingDays !== undefined ? { workingDays } : {}),
   });
   await user.save();
+  logActivity({
+    actor: req.user._id, action: 'user.create', entityType: 'user', entityId: user._id,
+    summary: `a créé le compte ${user.name} (${user.role})`,
+  });
   res.status(201).json(user);
 });
 
@@ -67,12 +72,20 @@ const updateUser = asyncHandler(async (req, res) => {
 
   const { dailyCapacityHours, workingDays, role, name } = req.body;
   await assertRoleExists(role);
+  const prevRole = user.role;
   if (dailyCapacityHours !== undefined) user.dailyCapacityHours = dailyCapacityHours;
   if (workingDays !== undefined) user.workingDays = workingDays;
   if (role !== undefined) user.role = role;
   if (name !== undefined) user.name = name;
 
   await user.save();
+  const roleChanged = role !== undefined && role !== prevRole;
+  logActivity({
+    actor: req.user._id, action: 'user.update', entityType: 'user', entityId: user._id,
+    summary: roleChanged
+      ? `a changé le rôle de ${user.name} en ${user.role}`
+      : `a modifié le compte ${user.name}`,
+  });
   res.json(user);
 });
 

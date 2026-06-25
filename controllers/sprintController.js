@@ -5,6 +5,7 @@ const { computeSprintCapacity } = require('../services/capacityService');
 const { canManageProject, canAccessProject } = require('../utils/authz');
 const { notify } = require('../services/notificationService');
 const { emitToProject } = require('../realtime');
+const { logActivity } = require('../services/activityService');
 
 // Charge un sprint et son projet (pour les contrôles d'accès scopés).
 async function loadSprintWithProject(sprintId) {
@@ -36,6 +37,10 @@ const createSprint = asyncHandler(async (req, res) => {
     status: 'planned',
   });
   emitToProject(sprint.project, 'sprint:changed');
+  logActivity({
+    actor: req.user._id, action: 'sprint.create', entityType: 'sprint', entityId: sprint._id, project: proj._id,
+    summary: `a créé le sprint « ${sprint.name} »`,
+  });
   res.status(201).json(sprint);
 });
 
@@ -85,6 +90,10 @@ const startSprint = asyncHandler(async (req, res) => {
   });
 
   emitToProject(sprint.project, 'sprint:changed');
+  logActivity({
+    actor: req.user._id, action: 'sprint.start', entityType: 'sprint', entityId: sprint._id, project: project._id,
+    summary: `a démarré le sprint « ${sprint.name} »`,
+  });
   res.json(sprint);
 });
 
@@ -106,6 +115,10 @@ const completeSprint = asyncHandler(async (req, res) => {
     status: { $ne: 'done' },
   });
   emitToProject(sprint.project, 'sprint:changed');
+  logActivity({
+    actor: req.user._id, action: 'sprint.complete', entityType: 'sprint', entityId: sprint._id, project: project._id,
+    summary: `a clôturé le sprint « ${sprint.name} »`,
+  });
   res.json({ sprint, unfinishedTasks: unfinished });
 });
 
@@ -126,6 +139,10 @@ const updateSprint = asyncHandler(async (req, res) => {
 
   await sprint.save();
   emitToProject(sprint.project, 'sprint:changed');
+  logActivity({
+    actor: req.user._id, action: 'sprint.update', entityType: 'sprint', entityId: sprint._id, project: project._id,
+    summary: `a modifié le sprint « ${sprint.name} »`,
+  });
   res.json(sprint);
 });
 
