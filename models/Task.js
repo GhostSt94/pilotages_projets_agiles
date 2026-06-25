@@ -12,6 +12,17 @@ const commentSchema = new mongoose.Schema(
   { timestamps: true, _id: true }
 );
 
+// Entrée de journal de temps : heures réellement passées par un membre sur la tâche.
+const timeLogSchema = new mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    hours: { type: Number, required: true, min: 0 }, // en HEURES (unité de l'app)
+    spentOn: { type: Date, default: Date.now }, // jour concerné
+    note: { type: String, trim: true, default: '' },
+  },
+  { timestamps: true, _id: true }
+);
+
 // Image attachée à une tâche (stockée sur disque, servie via /uploads).
 const attachmentSchema = new mongoose.Schema(
   {
@@ -58,11 +69,19 @@ const taskSchema = new mongoose.Schema(
     comments: [commentSchema],
     attachments: [attachmentSchema],
 
+    // Journal du temps réellement passé (suivi du temps, distinct de `estimate`).
+    timeLogs: [timeLogSchema],
+
     // Position de la carte dans sa colonne Kanban (persistance du glisser-déposer).
     order: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true }, id: false }
 );
+
+// Total des heures saisies sur la tâche (somme du journal de temps).
+taskSchema.virtual('loggedHours').get(function () {
+  return (this.timeLogs || []).reduce((sum, l) => sum + (l.hours || 0), 0);
+});
 
 // Index recommandés (cf. cahier des charges).
 taskSchema.index({ project: 1, sprint: 1, status: 1, order: 1 });

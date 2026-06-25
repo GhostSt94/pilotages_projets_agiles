@@ -4,11 +4,11 @@
  * un sprint actif, des tâches à différents statuts et quelques congés.
  *
  * Lancement :  npm run seed
- * ATTENTION : vide les collections users/projects/sprints/tasks/leaves.
+ * ATTENTION : vide les collections users/projects/sprints/tasks/leaves/notifications.
  */
 const mongoose = require('mongoose');
 const { connectDB, disconnectDB } = require('../config/db');
-const { User, Project, Sprint, Task, Leave } = require('../models');
+const { User, Project, Sprint, Task, Leave, Notification } = require('../models');
 const { ensureDefaultRoles } = require('../services/roleService');
 
 // Dates relatives à aujourd'hui pour que le sprint soit toujours "en cours".
@@ -32,6 +32,7 @@ async function run() {
     Sprint.deleteMany({}),
     Task.deleteMany({}),
     Leave.deleteMany({}),
+    Notification.deleteMany({}),
   ]);
 
   // --- Utilisateurs ---
@@ -126,13 +127,13 @@ async function run() {
 
   // --- Tâches du sprint actif (statuts variés) ---
   const sprintTasks = [
-    { title: 'Page liste des produits', status: 'done', estimate: 8, assignee: dev1._id, type: 'feature', order: 0 },
-    { title: 'Filtres et recherche catalogue', status: 'in_progress', estimate: 12, assignee: dev1._id, type: 'feature', priority: 'high', order: 1 },
-    { title: 'Fiche produit détaillée', status: 'in_review', estimate: 6, assignee: dev2._id, type: 'feature', order: 0 },
-    { title: 'Ajout au panier', status: 'in_progress', estimate: 10, assignee: dev2._id, type: 'feature', priority: 'high', order: 2 },
+    { title: 'Page liste des produits', status: 'done', estimate: 8, assignee: dev1._id, type: 'feature', order: 0, logged: [{ hours: 5, day: -2 }, { hours: 2.5, day: -1 }] },
+    { title: 'Filtres et recherche catalogue', status: 'in_progress', estimate: 12, assignee: dev1._id, type: 'feature', priority: 'high', order: 1, logged: [{ hours: 4, day: -1 }, { hours: 3, day: 0 }] },
+    { title: 'Fiche produit détaillée', status: 'in_review', estimate: 6, assignee: dev2._id, type: 'feature', order: 0, logged: [{ hours: 6, day: -1 }] },
+    { title: 'Ajout au panier', status: 'in_progress', estimate: 10, assignee: dev2._id, type: 'feature', priority: 'high', order: 2, logged: [{ hours: 4, day: 0 }] },
     { title: 'Persistance du panier (localStorage)', status: 'todo', estimate: 5, assignee: dev3._id, type: 'tech', order: 0 },
     { title: 'Bug : prix TTC mal arrondi', status: 'todo', estimate: 3, assignee: dev3._id, type: 'bug', priority: 'critical', order: 1 },
-    { title: 'Composant en-tête + navigation', status: 'done', estimate: 4, assignee: dev1._id, type: 'feature', order: 2 },
+    { title: 'Composant en-tête + navigation', status: 'done', estimate: 4, assignee: dev1._id, type: 'feature', order: 2, logged: [{ hours: 4, day: -2 }] },
   ];
 
   let taskNumber = 0; // séquence KEY-N par projet (Atlas)
@@ -150,6 +151,7 @@ async function run() {
       assignee: t.assignee,
       labels: ['catalogue'],
       order: t.order,
+      timeLogs: (t.logged || []).map((l) => ({ user: t.assignee, hours: l.hours, spentOn: dayOffset(l.day) })),
     });
   }
 

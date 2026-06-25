@@ -1,10 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export function useLeaves(params = {}) {
   return useQuery({
     queryKey: ['leaves', params],
     queryFn: async () => (await api.get('/leaves', { params })).data,
+  });
+}
+
+// Liste paginée côté serveur ({ items, total, page, pageCount }).
+export function useLeavesPage(params = {}, options = {}) {
+  return useQuery({
+    queryKey: ['leaves', 'page', params],
+    queryFn: async () => (await api.get('/leaves', { params })).data,
+    placeholderData: keepPreviousData,
+    ...options,
   });
 }
 

@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Check, X, Inbox, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePageHeader } from '@/components/layout/AppShell';
 import { useAuth, can } from '@/lib/auth';
-import { useLeaves, useApproveLeave, useRejectLeave } from '@/hooks/useLeaves';
+import { useLeaves, useLeavesPage, useApproveLeave, useRejectLeave } from '@/hooks/useLeaves';
 import { useUsers } from '@/hooks/useUsers';
 import { apiError } from '@/lib/api';
 import { formatRange, formatDate } from '@/lib/dates';
@@ -26,6 +26,7 @@ export default function LeavesPage() {
   const manager = can(user, 'leave.review');
   usePageHeader('Congés & calendrier', manager ? 'Disponibilités et validation de l\'équipe' : 'Mes congés');
 
+  // Liste complète (pour le calendrier d'équipe et la file « à valider »).
   const { data: leaves = [], isLoading, isError, error, refetch } = useLeaves();
   const { data: allUsers = [] } = useUsers({}, { enabled: manager });
   const approve = useApproveLeave();
@@ -39,8 +40,14 @@ export default function LeavesPage() {
   const [page, setPage] = useState(0);
 
   const pending = leaves.filter((l) => l.status === 'pending');
-  const filtered = statusFilter === 'all' ? leaves : leaves.filter((l) => l.status === statusFilter);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  // Liste « Tous les congés » : pagination + filtre de statut côté serveur.
+  const listParams = { page: page + 1, limit: PAGE_SIZE };
+  if (statusFilter !== 'all') listParams.status = statusFilter;
+  const { data: listData } = useLeavesPage(listParams);
+  const pageLeaves = listData?.items || [];
+  const total = listData?.total || 0;
+  const pageCount = listData?.pageCount || 1;
 
   useEffect(() => { setPage(0); }, [statusFilter]);
   useEffect(() => { setPage((p) => (p >= pageCount ? 0 : p)); }, [pageCount]);
@@ -56,8 +63,6 @@ export default function LeavesPage() {
 
   if (isLoading) return <PageLoader />;
   if (isError) return <div className="p-6"><ErrorState error={apiError(error)} onRetry={refetch} /></div>;
-
-  const pageLeaves = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   return (
     <div className="space-y-6 p-6">
@@ -128,7 +133,7 @@ export default function LeavesPage() {
             </Select>
           </div>
 
-          {filtered.length ? (
+          {total ? (
             <>
               <Card className="divide-y">
                 {pageLeaves.map((l) => (

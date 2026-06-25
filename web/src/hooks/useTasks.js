@@ -94,6 +94,30 @@ export function useAddComment() {
   });
 }
 
+// Saisie de temps passé sur une tâche.
+export function useAddTimeLog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, hours, spentOn, note }) =>
+      (await api.post(`/tasks/${id}/timelogs`, { hours, spentOn, note })).data,
+    onSuccess: (_d, { id }) => {
+      invalidateTaskViews(qc);
+      qc.invalidateQueries({ queryKey: ['task', id] });
+    },
+  });
+}
+
+export function useRemoveTimeLog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, logId }) => (await api.delete(`/tasks/${id}/timelogs/${logId}`)).data,
+    onSuccess: (_d, { id }) => {
+      invalidateTaskViews(qc);
+      qc.invalidateQueries({ queryKey: ['task', id] });
+    },
+  });
+}
+
 // Upload d'une image sur une tâche (multipart/form-data).
 export function useAddAttachment() {
   const qc = useQueryClient();

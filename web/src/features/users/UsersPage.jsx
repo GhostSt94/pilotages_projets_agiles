@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Pencil, Loader2, Plus, X, Clock, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth, can } from '@/lib/auth';
-import { useUsers, useUpdateUser } from '@/hooks/useUsers';
+import { useUsersPage, useUpdateUser } from '@/hooks/useUsers';
 import { useRoles } from '@/hooks/useRoles';
 import { apiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -28,10 +28,16 @@ import { KeyRound } from 'lucide-react';
 export default function UsersPage() {
   const { user } = useAuth();
   const isAdmin = can(user, 'user.manage');
+  const PAGE_SIZE = 8;
   const [roleFilter, setRoleFilter] = useState('all');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
-  const { data: users = [], isLoading, isError, error, refetch } = useUsers(roleFilter !== 'all' ? { role: roleFilter } : {});
+
+  // Recherche (nom/email), filtre de rôle et pagination — désormais côté serveur.
+  const params = { page: page + 1, limit: PAGE_SIZE };
+  if (q.trim()) params.q = q.trim();
+  if (roleFilter !== 'all') params.role = roleFilter;
+  const { data, isLoading, isError, error, refetch } = useUsersPage(params);
   const { data: roles = [] } = useRoles();
   const update = useUpdateUser();
 
@@ -40,16 +46,11 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [resetUser, setResetUser] = useState(null);
 
-  // Recherche (nom/email) + pagination, côté client sur la liste chargée.
-  const PAGE_SIZE = 8;
-  const filtered = users.filter((u) => {
-    const t = q.trim().toLowerCase();
-    return !t || u.name?.toLowerCase().includes(t) || u.email?.toLowerCase().includes(t);
-  });
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageUsers = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  const pageUsers = data?.items || [];
+  const total = data?.total || 0;
+  const pageCount = data?.pageCount || 1;
 
-  // Revenir à la 1re page quand la recherche/filtre change ou que la liste raccourcit.
+  // Revenir à la 1re page quand la recherche/filtre change.
   useEffect(() => {
     setPage(0);
   }, [q, roleFilter]);
@@ -94,15 +95,13 @@ export default function UsersPage() {
   if (isLoading) return <PageLoader />;
   if (isError) return <div className="p-6"><ErrorState error={apiError(error)} onRetry={refetch} /></div>;
 
-  const totalWeekly = filtered.reduce((s, u) => s + weeklyHours(u), 0);
-
   return (
     <div className={cn('grid gap-6 p-6', isAdmin && 'lg:grid-cols-[1fr_360px]')}>
       <div>
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <h2 className="text-base font-semibold text-slate-900">Société</h2>
           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
-            {filtered.length} membre{filtered.length > 1 ? 's' : ''} · {totalWeekly} h capacité/sem cumulée
+            {total} membre{total > 1 ? 's' : ''}
           </span>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <div className="relative">

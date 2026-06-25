@@ -70,6 +70,25 @@ router.post(
 );
 
 router.post(
+  '/:id/timelogs',
+  [
+    param('id').isMongoId(),
+    body('hours').isFloat({ gt: 0 }).withMessage('Le temps saisi doit être supérieur à 0.'),
+    body('spentOn').optional().isISO8601(),
+    body('note').optional().isString(),
+  ],
+  validate,
+  ctrl.addTimeLog
+);
+
+router.delete(
+  '/:id/timelogs/:logId',
+  [param('id').isMongoId(), param('logId').isMongoId()],
+  validate,
+  ctrl.removeTimeLog
+);
+
+router.post(
   '/:id/attachments',
   param('id').isMongoId(),
   validate,

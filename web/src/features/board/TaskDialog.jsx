@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Loader2, Trash2, Send, MessageSquare,
-  CircleDot, User, Flag, Shapes, CalendarRange, Clock, Tags, ImagePlus, X,
+  CircleDot, User, Flag, Shapes, CalendarRange, Clock, Tags, ImagePlus, X, Timer, Plus,
 } from 'lucide-react';
-import { useTask, useCreateTask, useUpdateTask, useDeleteTask, useAddComment, useAddAttachment, useRemoveAttachment } from '@/hooks/useTasks';
+import { useTask, useCreateTask, useUpdateTask, useDeleteTask, useAddComment, useAddAttachment, useRemoveAttachment, useAddTimeLog, useRemoveTimeLog } from '@/hooks/useTasks';
 import { useSprints } from '@/hooks/useSprints';
 import { useProject } from '@/lib/project';
 import { useAuth, canModifyTask } from '@/lib/auth';
@@ -49,9 +49,13 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
   const addComment = useAddComment();
   const addAttachment = useAddAttachment();
   const removeAttachment = useRemoveAttachment();
+  const addTimeLog = useAddTimeLog();
+  const removeTimeLog = useRemoveTimeLog();
 
   const [form, setForm] = useState(EMPTY);
   const [comment, setComment] = useState('');
+  const [tlHours, setTlHours] = useState('');
+  const [tlNote, setTlNote] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Images sélectionnées avant création (téléversées après création de la tâche).
   const [pending, setPending] = useState([]); // [{ file, url }]
@@ -61,6 +65,8 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
     if (!open) {
       // Libère les aperçus locaux à la fermeture.
       setPending((p) => { p.forEach((x) => URL.revokeObjectURL(x.url)); return []; });
+      setTlHours('');
+      setTlNote('');
       return;
     }
     if (editing && task) {
@@ -144,6 +150,27 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
     try {
       setComment('');
       await addComment.mutateAsync({ id: taskId, body: comment, author: user });
+    } catch (err) {
+      toast.error(apiError(err));
+    }
+  }
+
+  async function onAddTimeLog(e) {
+    e.preventDefault();
+    const hours = Number(tlHours);
+    if (!hours || hours <= 0) return;
+    try {
+      await addTimeLog.mutateAsync({ id: taskId, hours, note: tlNote.trim() });
+      setTlHours('');
+      setTlNote('');
+      toast.success('Temps enregistré.');
+    } catch (err) {
+      toast.error(apiError(err));
+    }
+  }
+  async function onRemoveTimeLog(logId) {
+    try {
+      await removeTimeLog.mutateAsync({ id: taskId, logId });
     } catch (err) {
       toast.error(apiError(err));
     }
@@ -308,6 +335,82 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
                     </div>
                     {editing && !task.attachments?.length && !canEdit && (
                       <p className="text-sm text-slate-400">Aucune image.</p>
+                    )}
+                  </div>
+                )}
+
+                {editing && task && (
+                  <div>
+                    <h4 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <Timer className="h-4 w-4" /> Temps passé
+                      <span className="rounded-full bg-slate-100 px-1.5 text-[11px] font-medium text-slate-500">
+                        {task.loggedHours || 0} h{task.estimate ? ` / ${task.estimate} h` : ''}
+                      </span>
+                    </h4>
+
+                    {/* Barre estimé vs saisi */}
+                    {task.estimate > 0 && (
+                      <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className={`h-full rounded-full ${task.loggedHours > task.estimate ? 'bg-rose-400' : 'bg-primary'}`}
+                          style={{ width: `${Math.min(100, Math.round(((task.loggedHours || 0) / task.estimate) * 100))}%` }}
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      {(task.timeLogs || []).map((l) => (
+                        <div key={l._id} className="group flex items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-2">
+                          <Avatar name={l.user?.name} id={l.user?._id} size="sm" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-sm font-medium text-slate-700">{l.user?.name}</span>
+                              <span className="text-[11px] text-slate-400">{formatDate(l.spentOn || l.createdAt)}</span>
+                            </div>
+                            {l.note && <p className="truncate text-xs text-slate-500">{l.note}</p>}
+                          </div>
+                          <span className="shrink-0 text-sm font-semibold text-slate-800">{l.hours} h</span>
+                          {(canEdit && (String(l.user?._id) === String(user?._id) || canModifyTask(user, currentProject, task))) && (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveTimeLog(l._id)}
+                              disabled={removeTimeLog.isPending}
+                              className="text-slate-300 opacity-0 transition hover:text-red-500 group-hover:opacity-100"
+                              aria-label="Supprimer la saisie"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {!task.timeLogs?.length && (
+                        <p className="rounded-lg border border-dashed py-4 text-center text-sm text-slate-400">
+                          Aucun temps saisi pour l'instant.
+                        </p>
+                      )}
+                    </div>
+
+                    {canEdit && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="relative w-28 shrink-0">
+                          <Input
+                            type="number" min="0" step="0.5" value={tlHours}
+                            onChange={(e) => setTlHours(e.target.value)}
+                            placeholder="Heures" className="pr-7"
+                            onKeyDown={(e) => { if (e.key === 'Enter') onAddTimeLog(e); }}
+                          />
+                          <span className="pointer-events-none absolute right-3 top-2 text-xs text-slate-400">h</span>
+                        </div>
+                        <Input
+                          value={tlNote}
+                          onChange={(e) => setTlNote(e.target.value)}
+                          placeholder="Note (optionnel)…"
+                          onKeyDown={(e) => { if (e.key === 'Enter') onAddTimeLog(e); }}
+                        />
+                        <Button type="button" size="icon" onClick={onAddTimeLog} disabled={addTimeLog.isPending || !tlHours}>
+                          {addTimeLog.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}

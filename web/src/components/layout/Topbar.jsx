@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { ROLE } from '@/lib/constants';
+import { NotificationsBell } from './NotificationsBell';
 
 export function Topbar({ title, subtitle, onOpenSidebar }) {
   const { user, logout } = useAuth();
@@ -40,6 +41,9 @@ export function Topbar({ title, subtitle, onOpenSidebar }) {
           <span>Rechercher</span>
           <kbd className="rounded border bg-slate-50 px-1.5 text-[10px] text-slate-400">⌘K</kbd>
         </button>
+
+        {/* Notifications */}
+        <NotificationsBell />
 
         {/* Sélecteur de projet courant */}
         {currentProject && (

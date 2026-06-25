@@ -10,5 +10,6 @@ router.use('/tasks', require('./taskRoutes'));
 router.use('/leaves', require('./leaveRoutes'));
 router.use('/dashboard', require('./dashboardRoutes'));
 router.use('/roles', require('./roleRoutes'));
+router.use('/notifications', require('./notificationRoutes'));
 
 module.exports = router;

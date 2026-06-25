@@ -35,45 +35,30 @@ function clampRange(aStart, aEnd, bStart, bEnd) {
 }
 
 /**
- * Calcule la capacité d'un sprint.
- * Pour chaque membre du projet, sur la période [startDate, endDate] :
- *   - jours travaillés (selon workingDays)
- *   - moins les jours couverts par ses congés approuvés chevauchant le sprint
- *   => jours disponibles × dailyCapacityHours = capacité du membre.
- * Capacité du sprint = somme des capacités membres.
- * Charge engagée = somme des estimate des tâches du sprint.
+ * Cœur de calcul **pur** de la capacité d'un sprint (sans accès base de données).
+ * Toute l'arithmétique métier sensible est ici pour être testable en isolation.
  *
- * @returns {Promise<object>} détail complet de la capacité.
+ * @param {object}   params
+ * @param {object}   params.sprint   { _id?, name?, status?, startDate, endDate }
+ * @param {object[]} params.members  [{ _id, name, email, role, dailyCapacityHours, workingDays }]
+ * @param {object[]} params.leaves   congés [{ _id, user|user._id, type, startDate, endDate, status }]
+ *                                    (filtrés ici sur `approved` + chevauchement du sprint)
+ * @param {object[]} params.tasks    tâches du sprint [{ estimate }]
+ * @returns {object} détail complet de la capacité.
  */
-async function computeSprintCapacity(sprintId) {
-  const sprint = await Sprint.findById(sprintId);
-  if (!sprint) throw ApiError.notFound('Sprint introuvable.');
-
-  const project = await Project.findById(sprint.project).populate(
-    'members',
-    'name email role dailyCapacityHours workingDays'
-  );
-  if (!project) throw ApiError.notFound('Projet du sprint introuvable.');
-
+function computeCapacityBreakdown({ sprint, members = [], leaves = [], tasks = [] }) {
   const sprintStart = toUtcMidnight(sprint.startDate);
   const sprintEnd = toUtcMidnight(sprint.endDate);
   const sprintDays = eachDay(sprintStart, sprintEnd);
 
-  const members = project.members || [];
-  const memberIds = members.map((m) => m._id);
-
-  // Congés approuvés des membres chevauchant la période du sprint.
-  const leaves = await Leave.find({
-    user: { $in: memberIds },
-    status: 'approved',
-    startDate: { $lte: sprintEnd },
-    endDate: { $gte: sprintStart },
-  }).populate('user', 'name');
-
-  // Regroupe les congés par utilisateur.
+  // Congés approuvés chevauchant la période, regroupés par utilisateur.
   const leavesByUser = new Map();
   for (const leave of leaves) {
-    const key = String(leave.user._id);
+    if (leave.status !== 'approved') continue;
+    const ls = toUtcMidnight(leave.startDate);
+    const le = toUtcMidnight(leave.endDate);
+    if (ls > sprintEnd || le < sprintStart) continue; // pas de chevauchement
+    const key = String(leave.user?._id || leave.user);
     if (!leavesByUser.has(key)) leavesByUser.set(key, []);
     leavesByUser.get(key).push(leave);
   }
@@ -142,9 +127,6 @@ async function computeSprintCapacity(sprintId) {
   });
 
   const availableCapacityHours = memberDetails.reduce((sum, m) => sum + m.availableHours, 0);
-
-  // Charge engagée : somme des estimations des tâches du sprint.
-  const tasks = await Task.find({ sprint: sprint._id }).select('estimate status');
   const committedHours = tasks.reduce((sum, t) => sum + (t.estimate || 0), 0);
 
   const overload = committedHours > availableCapacityHours;
@@ -172,9 +154,49 @@ async function computeSprintCapacity(sprintId) {
   };
 }
 
+/**
+ * Calcule la capacité d'un sprint : charge les données puis délègue à
+ * `computeCapacityBreakdown`. Pour chaque membre du projet, sur la période :
+ *   - jours travaillés (selon workingDays)
+ *   - moins les jours couverts par ses congés approuvés chevauchant le sprint
+ *   => jours disponibles × dailyCapacityHours = capacité du membre.
+ *
+ * @returns {Promise<object>} détail complet de la capacité.
+ */
+async function computeSprintCapacity(sprintId) {
+  const sprint = await Sprint.findById(sprintId);
+  if (!sprint) throw ApiError.notFound('Sprint introuvable.');
+
+  const project = await Project.findById(sprint.project).populate(
+    'members',
+    'name email role dailyCapacityHours workingDays'
+  );
+  if (!project) throw ApiError.notFound('Projet du sprint introuvable.');
+
+  const sprintStart = toUtcMidnight(sprint.startDate);
+  const sprintEnd = toUtcMidnight(sprint.endDate);
+
+  const members = project.members || [];
+  const memberIds = members.map((m) => m._id);
+
+  // Congés approuvés des membres chevauchant la période du sprint.
+  const leaves = await Leave.find({
+    user: { $in: memberIds },
+    status: 'approved',
+    startDate: { $lte: sprintEnd },
+    endDate: { $gte: sprintStart },
+  }).populate('user', 'name');
+
+  // Charge engagée : tâches du sprint (estimations).
+  const tasks = await Task.find({ sprint: sprint._id }).select('estimate status');
+
+  return computeCapacityBreakdown({ sprint, members, leaves, tasks });
+}
+
 module.exports = {
   computeSprintCapacity,
   // exportés pour réutilisation/tests
+  computeCapacityBreakdown,
   eachDay,
   toUtcMidnight,
   clampRange,

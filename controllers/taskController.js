@@ -5,6 +5,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { canModifyTask, isProjectMember, hasPermission } = require('../utils/authz');
 const { UPLOAD_DIR } = require('../middlewares/upload');
+const { notify } = require('../services/notificationService');
 
 // Vérifie qu'un sprint (s'il est fourni) appartient bien au projet.
 async function assertSprintBelongsToProject(sprintId, projectId) {
@@ -53,7 +54,8 @@ const getTask = asyncHandler(async (req, res) => {
     .populate('assignee', 'name email')
     .populate('project', 'key name')
     .populate('comments.author', 'name email')
-    .populate('attachments.uploadedBy', 'name');
+    .populate('attachments.uploadedBy', 'name')
+    .populate('timeLogs.user', 'name email');
   if (!task) throw ApiError.notFound('Tâche introuvable.');
   res.json(task);
 });
@@ -89,6 +91,19 @@ const createTask = asyncHandler(async (req, res) => {
     labels: labels || [],
     status: status || 'todo',
   });
+
+  // Prévenir l'assigné (sauf si l'on s'assigne soi-même).
+  if (task.assignee) {
+    await notify({
+      users: [task.assignee],
+      type: 'task_assigned',
+      title: 'Nouvelle tâche assignée',
+      body: `« ${task.title} » vous a été assignée.`,
+      link: '/my-tasks',
+      exclude: req.user._id,
+    });
+  }
+
   res.status(201).json(task);
 });
 
@@ -107,6 +122,7 @@ async function loadTaskForModify(req) {
 // PATCH /tasks/:id
 const updateTask = asyncHandler(async (req, res) => {
   const { task } = await loadTaskForModify(req);
+  const prevAssignee = String(task.assignee || '');
 
   const { title, description, type, estimate, priority, assignee, labels, status, sprint } = req.body;
   if (title !== undefined) task.title = title;
@@ -123,6 +139,20 @@ const updateTask = asyncHandler(async (req, res) => {
   }
 
   await task.save();
+
+  // Notifier le nouvel assigné si l'assignation a changé.
+  const newAssignee = String(task.assignee || '');
+  if (newAssignee && newAssignee !== prevAssignee) {
+    await notify({
+      users: [task.assignee],
+      type: 'task_assigned',
+      title: 'Tâche assignée',
+      body: `« ${task.title} » vous a été assignée.`,
+      link: '/my-tasks',
+      exclude: req.user._id,
+    });
+  }
+
   res.json(task);
 });
 
@@ -156,6 +186,35 @@ const addComment = asyncHandler(async (req, res) => {
   await task.save();
   const populated = await task.populate('comments.author', 'name email');
   res.status(201).json(populated);
+});
+
+// POST /tasks/:id/timelogs — { hours, spentOn?, note? } : saisir du temps passé.
+const addTimeLog = asyncHandler(async (req, res) => {
+  const { task } = await loadTaskForModify(req);
+  const { hours, spentOn, note } = req.body;
+  task.timeLogs.push({
+    user: req.user._id,
+    hours,
+    ...(spentOn ? { spentOn } : {}),
+    note: note || '',
+  });
+  await task.save();
+  const populated = await task.populate('timeLogs.user', 'name email');
+  res.status(201).json(populated);
+});
+
+// DELETE /tasks/:id/timelogs/:logId — retirer une entrée (auteur ou gestionnaire).
+const removeTimeLog = asyncHandler(async (req, res) => {
+  const { task } = await loadTaskForModify(req);
+  const log = task.timeLogs.id(req.params.logId);
+  if (!log) throw ApiError.notFound('Entrée de temps introuvable.');
+  // Seuls l'auteur de la saisie ou un gestionnaire global peuvent la supprimer.
+  if (String(log.user) !== String(req.user._id) && !hasPermission(req, 'task.manage.any')) {
+    throw ApiError.forbidden('Vous ne pouvez supprimer que vos propres saisies de temps.');
+  }
+  task.timeLogs.pull(req.params.logId);
+  await task.save();
+  res.json({ deleted: true, id: req.params.logId });
 });
 
 // POST /tasks/:id/attachments — image (multipart, champ « image »)
@@ -195,6 +254,8 @@ module.exports = {
   moveTask,
   deleteTask,
   addComment,
+  addTimeLog,
+  removeTimeLog,
   addAttachment,
   removeAttachment,
 };

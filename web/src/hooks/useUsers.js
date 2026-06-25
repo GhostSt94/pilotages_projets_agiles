@@ -1,10 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export function useUsers(params = {}, options = {}) {
   return useQuery({
     queryKey: ['users', params],
     queryFn: async () => (await api.get('/users', { params })).data,
+    ...options,
+  });
+}
+
+// Liste paginée côté serveur ({ items, total, page, pageCount }). Garde la page
+// précédente affichée pendant le chargement de la suivante (pas de clignotement).
+export function useUsersPage(params = {}, options = {}) {
+  return useQuery({
+    queryKey: ['users', 'page', params],
+    queryFn: async () => (await api.get('/users', { params })).data,
+    placeholderData: keepPreviousData,
     ...options,
   });
 }

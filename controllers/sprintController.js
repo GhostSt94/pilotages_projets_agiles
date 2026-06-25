@@ -3,6 +3,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { computeSprintCapacity } = require('../services/capacityService');
 const { canManageProject, canAccessProject } = require('../utils/authz');
+const { notify } = require('../services/notificationService');
 
 // Charge un sprint et son projet (pour les contrôles d'accès scopés).
 async function loadSprintWithProject(sprintId) {
@@ -70,6 +71,17 @@ const startSprint = asyncHandler(async (req, res) => {
 
   sprint.status = 'active';
   await sprint.save();
+
+  // Prévenir les membres du projet du démarrage du sprint.
+  await notify({
+    users: project.members || [],
+    type: 'sprint_started',
+    title: 'Sprint démarré',
+    body: `Le sprint « ${sprint.name} » est maintenant actif.`,
+    link: '/dashboard',
+    exclude: req.user._id,
+  });
+
   res.json(sprint);
 });
 

@@ -29,6 +29,15 @@ const getDashboard = asyncHandler(async (req, res) => {
     if (t.status === 'done') doneEstimate += t.estimate || 0;
   }
 
+  // Temps réellement saisi par utilisateur sur les tâches du sprint (journal de temps).
+  const loggedByUser = new Map();
+  for (const t of tasks) {
+    for (const log of t.timeLogs || []) {
+      const k = String(log.user);
+      loggedByUser.set(k, (loggedByUser.get(k) || 0) + (log.hours || 0));
+    }
+  }
+
   // Charge par membre (toutes les tâches du sprint, assignées).
   const loadByMember = new Map();
   for (const t of tasks) {
@@ -40,6 +49,7 @@ const getDashboard = asyncHandler(async (req, res) => {
         taskCount: 0,
         estimateHours: 0,
         doneHours: 0,
+        loggedHours: loggedByUser.get(key) || 0,
       });
     }
     const entry = loadByMember.get(key);

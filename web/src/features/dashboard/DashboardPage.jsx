@@ -162,6 +162,7 @@ function DashboardContent({ data }) {
                 <TableHead>Tâches</TableHead>
                 <TableHead>Estimé</TableHead>
                 <TableHead>Fait</TableHead>
+                <TableHead>Saisi</TableHead>
                 <TableHead>Dispo</TableHead>
                 <TableHead className="text-right">Occupation</TableHead>
               </TableRow>
@@ -178,13 +179,14 @@ function DashboardContent({ data }) {
                   <TableCell className="text-slate-600">{m.taskCount}</TableCell>
                   <TableCell className="text-slate-600">{m.estimateHours} h</TableCell>
                   <TableCell className="text-slate-600">{m.doneHours} h</TableCell>
+                  <TableCell className="text-slate-600">{m.loggedHours || 0} h</TableCell>
                   <TableCell className="text-slate-600">{m.availableHours ?? '—'} h</TableCell>
                   <TableCell className={cn('text-right font-medium', m.utilizationRate > 100 ? 'text-red-600' : 'text-slate-700')}>
                     {m.utilizationRate != null ? `${m.utilizationRate} %` : '—'}
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={6} className="text-center text-sm text-slate-400">Aucune tâche assignée.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-sm text-slate-400">Aucune tâche assignée.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
