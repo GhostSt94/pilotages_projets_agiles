@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import {
-  Search, X, ChevronLeft, ChevronRight, ScrollText,
-  SquareCheckBig, Rocket, CalendarClock, FolderKanban, UserCog,
-} from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ScrollText } from 'lucide-react';
 import { useActivity } from '@/hooks/useActivity';
 import { useUsers } from '@/hooks/useUsers';
 import { useProject } from '@/lib/project';
@@ -19,13 +16,13 @@ import { PageLoader, ErrorState, EmptyState } from '@/components/common/states';
 
 const PAGE_SIZE = 15;
 
-// Icône / teinte / libellé par type d'entité.
+// Teinte / libellé par type d'entité (utilisé pour le badge à droite).
 const ENTITY = {
-  task: { icon: SquareCheckBig, tint: 'bg-primary/10 text-primary', label: 'Tâche' },
-  sprint: { icon: Rocket, tint: 'bg-sky-100 text-sky-600', label: 'Sprint' },
-  leave: { icon: CalendarClock, tint: 'bg-amber-100 text-amber-600', label: 'Congé' },
-  project: { icon: FolderKanban, tint: 'bg-emerald-100 text-emerald-600', label: 'Projet' },
-  user: { icon: UserCog, tint: 'bg-rose-100 text-rose-600', label: 'Compte' },
+  task: { tint: 'bg-primary/10 text-primary', label: 'Tâche' },
+  sprint: { tint: 'bg-sky-100 text-sky-600', label: 'Sprint' },
+  leave: { tint: 'bg-amber-100 text-amber-600', label: 'Congé' },
+  project: { tint: 'bg-emerald-100 text-emerald-600', label: 'Projet' },
+  user: { tint: 'bg-rose-100 text-rose-600', label: 'Compte' },
 };
 const TYPE_ORDER = ['task', 'sprint', 'leave', 'project', 'user'];
 const ALL = '__all__';
@@ -42,7 +39,6 @@ export default function ActivityPage() {
   const { projects = [] } = useProject();
   const { data: users = [] } = useUsers();
 
-  const [q, setQ] = useState('');
   const [type, setType] = useState(ALL);
   const [actor, setActor] = useState(ALL);
   const [project, setProject] = useState(ALL);
@@ -51,7 +47,6 @@ export default function ActivityPage() {
   const [page, setPage] = useState(0);
 
   const params = { page: page + 1, limit: PAGE_SIZE };
-  if (q.trim()) params.q = q.trim();
   if (type !== ALL) params.type = type;
   if (actor !== ALL) params.actor = actor;
   if (project !== ALL) params.project = project;
@@ -63,13 +58,13 @@ export default function ActivityPage() {
   const items = data?.items || [];
   const total = data?.total || 0;
   const pageCount = data?.pageCount || 1;
-  const active = q.trim() || type !== ALL || actor !== ALL || project !== ALL || from || to;
+  const active = type !== ALL || actor !== ALL || project !== ALL || from || to;
 
-  useEffect(() => { setPage(0); }, [q, type, actor, project, from, to]);
+  useEffect(() => { setPage(0); }, [type, actor, project, from, to]);
   useEffect(() => { setPage((p) => (p >= pageCount ? 0 : p)); }, [pageCount]);
 
   function reset() {
-    setQ(''); setType(ALL); setActor(ALL); setProject(ALL); setFrom(''); setTo('');
+    setType(ALL); setActor(ALL); setProject(ALL); setFrom(''); setTo('');
   }
 
   if (isLoading && !data) return <PageLoader />;
@@ -84,16 +79,10 @@ export default function ActivityPage() {
         <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
           {total} entrée{total > 1 ? 's' : ''}
         </span>
-      </div>
 
-      {/* Filtres */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher…" className="h-9 w-52 pl-8" />
-        </div>
-
-        <Select value={type} onValueChange={setType}>
+        {/* Filtres (à droite du titre) */}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Select value={type} onValueChange={setType}>
           <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Type" /></SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>Tout type</SelectItem>
@@ -124,28 +113,25 @@ export default function ActivityPage() {
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-36" />
         </div>
 
-        {active && (
-          <Button variant="ghost" size="sm" className="text-slate-500" onClick={reset}>
-            <X className="h-4 w-4" /> Réinitialiser
-          </Button>
-        )}
+          {active && (
+            <Button variant="ghost" size="sm" className="text-slate-500" onClick={reset}>
+              <X className="h-4 w-4" /> Réinitialiser
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Liste */}
       {items.length ? (
         <Card className="divide-y">
           {items.map((a) => {
-            const meta = ENTITY[a.entityType] || { icon: ScrollText, tint: 'bg-slate-100 text-slate-500', label: a.entityType };
-            const Icon = meta.icon;
+            const meta = ENTITY[a.entityType] || { tint: 'bg-slate-100 text-slate-500', label: a.entityType };
             return (
               <div key={a._id} className="flex items-center gap-3 p-3.5">
-                <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-full', meta.tint)}>
-                  <Icon className="h-4 w-4" />
-                </span>
                 <Avatar name={a.actor?.name} id={a.actor?._id} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-slate-700">
-                    <span className="font-medium text-slate-800">{a.actor?.name || 'Quelqu\'un'}</span> {a.summary}
+                    <span className="font-bold text-slate-900">{a.actor?.name || 'Quelqu\'un'}</span> {a.summary}
                   </p>
                   <p className="text-[11px] text-slate-400">{timeAgo(a.createdAt)}</p>
                 </div>
@@ -153,7 +139,7 @@ export default function ActivityPage() {
                   {a.project?.key && (
                     <span className="rounded bg-slate-100 px-1.5 font-mono text-[10px] text-slate-500">{a.project.key}</span>
                   )}
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">{meta.label}</span>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', meta.tint)}>{meta.label}</span>
                 </div>
               </div>
             );
