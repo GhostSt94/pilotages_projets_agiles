@@ -1,20 +1,19 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
-import { TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
-/** Squelette du tableau Kanban (4 colonnes + cartes). */
+/** Squelette du tableau Kanban (colonnes génériques + cartes). */
 export function BoardSkeleton() {
   return (
     <div className="flex flex-1 gap-4 overflow-hidden p-5">
-      {TASK_STATUS_ORDER.map((status) => (
-        <div key={status} className="flex w-80 shrink-0 flex-col rounded-xl bg-slate-100/70">
+      {Array.from({ length: 4 }).map((_, col) => (
+        <div key={col} className="flex w-80 shrink-0 flex-col rounded-xl bg-slate-100/70">
           <div className="flex items-center gap-2 px-3 py-3">
-            <span className={cn('h-2 w-2 rounded-full', TASK_STATUS[status].dot)} />
-            <span className="text-sm font-semibold text-slate-500">{TASK_STATUS[status].label}</span>
+            <span className="h-2 w-2 rounded-full bg-slate-300" />
+            <Skeleton className="h-4 w-24" />
           </div>
           <div className="space-y-2.5 px-2.5 pb-2.5">
-            {Array.from({ length: status === 'todo' ? 3 : 2 }).map((_, i) => (
+            {Array.from({ length: col === 0 ? 3 : 2 }).map((_, i) => (
               <Card key={i} className="p-3">
                 <div className="flex justify-between">
                   <Skeleton className="h-3 w-20" />

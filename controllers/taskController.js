@@ -7,7 +7,14 @@ const { canModifyTask, isProjectMember, hasPermission } = require('../utils/auth
 const { UPLOAD_DIR } = require('../middlewares/upload');
 const { notify } = require('../services/notificationService');
 const { emitToProject } = require('../realtime');
-const { logActivity, statusLabel, taskCode } = require('../services/activityService');
+const { logActivity, taskCode } = require('../services/activityService');
+const {
+  assertStatusBelongsToProject,
+  getProjectStatuses,
+  statusMap,
+  statusMapForProjects,
+  toMeta,
+} = require('../services/statusService');
 
 // Vérifie qu'un sprint (s'il est fourni) appartient bien au projet.
 async function assertSprintBelongsToProject(sprintId, projectId) {
@@ -47,7 +54,14 @@ const listTasks = asyncHandler(async (req, res) => {
     .populate('assignee', 'name email')
     .populate('project', 'key name')
     .sort({ order: 1, createdAt: 1 });
-  res.json(tasks);
+
+  // Dénormalise le statut (label/couleur) de chaque tâche depuis les statuts de son projet.
+  const byProject = await statusMapForProjects(tasks.map((t) => t.project?._id || t.project));
+  const withMeta = tasks.map((t) => {
+    const meta = byProject.get(String(t.project?._id || t.project))?.get(t.status);
+    return { ...t.toJSON(), statusMeta: meta ? toMeta(meta) : null };
+  });
+  res.json(withMeta);
 });
 
 // GET /tasks/:id
@@ -59,7 +73,9 @@ const getTask = asyncHandler(async (req, res) => {
     .populate('attachments.uploadedBy', 'name')
     .populate('timeLogs.user', 'name email');
   if (!task) throw ApiError.notFound('Tâche introuvable.');
-  res.json(task);
+  const sm = await statusMap(task.project?._id || task.project);
+  const meta = sm.get(task.status);
+  res.json({ ...task.toJSON(), statusMeta: meta ? toMeta(meta) : null });
 });
 
 // POST /tasks — tout membre du projet.
@@ -76,6 +92,15 @@ const createTask = asyncHandler(async (req, res) => {
 
   await assertSprintBelongsToProject(sprint, project);
 
+  // Statut : validé contre le projet, sinon 1ʳᵉ colonne du projet.
+  let statusKey = status;
+  if (statusKey) {
+    await assertStatusBelongsToProject(project, statusKey);
+  } else {
+    const projectStatuses = await getProjectStatuses(project);
+    statusKey = projectStatuses[0]?.key || 'todo';
+  }
+
   // Numéro séquentiel par projet (KEY-N).
   const last = await Task.findOne({ project }).sort({ number: -1 }).select('number');
   const number = (last?.number || 0) + 1;
@@ -91,7 +116,7 @@ const createTask = asyncHandler(async (req, res) => {
     priority,
     assignee: assignee || null,
     labels: labels || [],
-    status: status || 'todo',
+    status: statusKey,
   });
 
   // Prévenir l'assigné (sauf si l'on s'assigne soi-même).
@@ -139,7 +164,10 @@ const updateTask = asyncHandler(async (req, res) => {
   if (priority !== undefined) task.priority = priority;
   if (assignee !== undefined) task.assignee = assignee || null;
   if (labels !== undefined) task.labels = labels;
-  if (status !== undefined) task.status = status;
+  if (status !== undefined) {
+    await assertStatusBelongsToProject(task.project, status);
+    task.status = status;
+  }
   if (sprint !== undefined) {
     await assertSprintBelongsToProject(sprint, task.project);
     task.sprint = sprint || null;
@@ -177,15 +205,22 @@ const moveTask = asyncHandler(async (req, res) => {
     await assertSprintBelongsToProject(sprint, task.project);
     task.sprint = sprint || null;
   }
-  if (status !== undefined) task.status = status;
+  if (status !== undefined) {
+    await assertStatusBelongsToProject(task.project, status);
+    task.status = status;
+  }
   if (order !== undefined) task.order = order;
 
   await task.save();
   emitToProject(task.project, 'task:changed');
+
+  // Libellé du statut courant pour le résumé d'activité.
+  const sm = await statusMap(project._id);
+  const label = sm.get(task.status)?.label || task.status;
   logActivity({
     actor: req.user._id, action: 'task.move', entityType: 'task', entityId: task._id, project: project._id,
     summary: status !== undefined
-      ? `a déplacé ${taskCode(project, task)} → ${statusLabel(task.status)}`
+      ? `a déplacé ${taskCode(project, task)} → ${label}`
       : `a déplacé ${taskCode(project, task)}`,
   });
   res.json(task);

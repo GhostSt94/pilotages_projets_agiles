@@ -8,4 +8,5 @@ module.exports = {
   Role: require('./Role'),
   Notification: require('./Notification'),
   ActivityLog: require('./ActivityLog'),
+  Status: require('./Status'),
 };

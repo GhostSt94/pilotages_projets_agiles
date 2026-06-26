@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-const TASK_STATUSES = ['todo', 'in_progress', 'in_review', 'done'];
 const TASK_TYPES = ['feature', 'bug', 'tech'];
 const TASK_PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
@@ -59,7 +58,8 @@ const taskSchema = new mongoose.Schema(
     estimate: { type: Number, default: 0, min: 0 },
 
     priority: { type: String, enum: TASK_PRIORITIES, default: 'medium' },
-    status: { type: String, enum: TASK_STATUSES, default: 'todo' },
+    // Clé de statut propre au projet (validée dynamiquement via statusService).
+    status: { type: String, default: null },
     assignee: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -88,7 +88,6 @@ taskSchema.index({ project: 1, sprint: 1, status: 1, order: 1 });
 taskSchema.index({ assignee: 1 });
 taskSchema.index({ project: 1, number: 1 });
 
-taskSchema.statics.STATUSES = TASK_STATUSES;
 taskSchema.statics.TYPES = TASK_TYPES;
 taskSchema.statics.PRIORITIES = TASK_PRIORITIES;
 

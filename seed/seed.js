@@ -8,8 +8,9 @@
  */
 const mongoose = require('mongoose');
 const { connectDB, disconnectDB } = require('../config/db');
-const { User, Project, Sprint, Task, Leave, Notification, ActivityLog } = require('../models');
+const { User, Project, Sprint, Task, Leave, Notification, ActivityLog, Status } = require('../models');
 const { ensureDefaultRoles } = require('../services/roleService');
+const { ensureDefaultStatuses } = require('../services/statusService');
 
 // Dates relatives à aujourd'hui pour que le sprint soit toujours "en cours".
 const today = new Date();
@@ -34,6 +35,7 @@ async function run() {
     Leave.deleteMany({}),
     Notification.deleteMany({}),
     ActivityLog.deleteMany({}),
+    Status.deleteMany({}),
   ]);
 
   // --- Utilisateurs ---
@@ -102,6 +104,9 @@ async function run() {
     members: [manager._id, dev1._id, dev2._id, dev3._id],
     status: 'active',
   });
+
+  // Statuts (colonnes Kanban) par défaut du projet — les tâches ci-dessous les utilisent.
+  await ensureDefaultStatuses(project._id);
 
   // --- Sprint actif (période de 2 semaines englobant aujourd'hui) ---
   const sprint = await Sprint.create({

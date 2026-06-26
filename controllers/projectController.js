@@ -3,6 +3,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { isProjectMember, hasPermission, canManageProject, canAccessProject } = require('../utils/authz');
 const { logActivity } = require('../services/activityService');
+const { getProjectStatuses, ensureDefaultStatuses, toMeta } = require('../services/statusService');
 
 // GET /projects — admin/manager voient tout ; developer voit ses projets.
 const listProjects = asyncHandler(async (req, res) => {
@@ -43,6 +44,9 @@ const createProject = asyncHandler(async (req, res) => {
     // Le créateur est toujours membre.
     members: Array.from(new Set([String(req.user._id), ...(members || []).map(String)])),
   });
+
+  // Crée les statuts (colonnes) par défaut du projet.
+  await ensureDefaultStatuses(project._id);
 
   const populated = await project.populate('members', 'name email role');
   logActivity({
@@ -142,13 +146,19 @@ const getBoard = asyncHandler(async (req, res) => {
 
   const activeSprint = await Sprint.findOne({ project: project._id, status: 'active' });
 
-  const columns = { todo: [], in_progress: [], in_review: [], done: [] };
+  // Colonnes dérivées des statuts (paramétrables) du projet.
+  const statuses = await getProjectStatuses(project._id);
+  const columns = {};
+  for (const s of statuses) columns[s.key] = [];
+
   if (activeSprint) {
     const tasks = await Task.find({ sprint: activeSprint._id })
       .populate('assignee', 'name email')
-      .sort({ status: 1, order: 1 });
+      .sort({ order: 1 });
     for (const task of tasks) {
+      // Repli sur la 1ʳᵉ colonne si le statut n'existe plus (sécurité).
       if (columns[task.status]) columns[task.status].push(task);
+      else if (statuses[0]) columns[statuses[0].key].push(task);
     }
   }
 
@@ -157,6 +167,7 @@ const getBoard = asyncHandler(async (req, res) => {
     activeSprint: activeSprint
       ? { _id: activeSprint._id, name: activeSprint.name, startDate: activeSprint.startDate, endDate: activeSprint.endDate }
       : null,
+    statuses: statuses.map(toMeta),
     columns,
   });
 });

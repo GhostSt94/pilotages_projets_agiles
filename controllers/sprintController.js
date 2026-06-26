@@ -6,6 +6,7 @@ const { canManageProject, canAccessProject } = require('../utils/authz');
 const { notify } = require('../services/notificationService');
 const { emitToProject } = require('../realtime');
 const { logActivity } = require('../services/activityService');
+const { doneKeys } = require('../services/statusService');
 
 // Charge un sprint et son projet (pour les contrôles d'accès scopés).
 async function loadSprintWithProject(sprintId) {
@@ -110,9 +111,10 @@ const completeSprint = asyncHandler(async (req, res) => {
   await sprint.save();
 
   // Renvoie les tâches non terminées (candidates au report dans le backlog).
+  const dk = await doneKeys(project._id);
   const unfinished = await Task.countDocuments({
     sprint: sprint._id,
-    status: { $ne: 'done' },
+    status: { $nin: dk },
   });
   emitToProject(sprint.project, 'sprint:changed');
   logActivity({

@@ -8,7 +8,6 @@ import { useProject } from '@/lib/project';
 import { useSprints } from '@/hooks/useSprints';
 import { useDashboard } from '@/hooks/useDashboard';
 import { apiError } from '@/lib/api';
-import { TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -17,7 +16,11 @@ import { Avatar } from '@/components/common/Avatar';
 import { CapacityBar } from '@/components/common/CapacityBar';
 import { PageLoader, ErrorState, EmptyState } from '@/components/common/states';
 
-const STATUS_HEX = { todo: '#94a3b8', in_progress: '#3b82f6', in_review: '#f59e0b', done: '#10b981' };
+// Couleur hex par clé de palette de statut (pour le camembert Recharts).
+const STATUS_HEX = {
+  slate: '#94a3b8', blue: '#3b82f6', sky: '#0ea5e9', cyan: '#06b6d4', teal: '#14b8a6',
+  emerald: '#10b981', amber: '#f59e0b', orange: '#f97316', rose: '#f43f5e', red: '#ef4444',
+};
 
 export default function DashboardPage() {
   const { currentProject, projectId } = useProject();
@@ -70,7 +73,9 @@ function DashboardContent({ data }) {
     { label: 'Occupation', value: capacity.utilizationRate != null ? `${capacity.utilizationRate} %` : '—', sub: capacity.overload ? 'surcharge !' : 'capacité OK', icon: Gauge, tint: 'bg-sky-50 text-sky-600' },
   ];
 
-  const pieData = TASK_STATUS_ORDER.map((s) => ({ name: TASK_STATUS[s].label, key: s, value: progress.tasksByStatus[s] })).filter((d) => d.value > 0);
+  const pieData = (data.statuses || [])
+    .map((s) => ({ name: s.label, key: s.key, color: s.color, value: progress.tasksByStatus[s.key] || 0 }))
+    .filter((d) => d.value > 0);
   const barData = memberLoad.map((m) => ({ name: m.user.name.split(' ')[0], Estimé: m.estimateHours, Disponible: m.availableHours ?? 0 }));
 
   return (
@@ -98,7 +103,7 @@ function DashboardContent({ data }) {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                    {pieData.map((d) => <Cell key={d.key} fill={STATUS_HEX[d.key]} />)}
+                    {pieData.map((d) => <Cell key={d.key} fill={STATUS_HEX[d.color] || '#94a3b8'} />)}
                   </Pie>
                   <Tooltip />
                   <Legend />

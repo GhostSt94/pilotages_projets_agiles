@@ -12,17 +12,17 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
-import { Plus, Calendar, Gauge, Trello, FolderKanban, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Plus, Calendar, Gauge, Trello, FolderKanban, AlertTriangle, CheckCircle2, Columns3 } from 'lucide-react';
 import { usePageHeader } from '@/components/layout/AppShell';
 import { useProject } from '@/lib/project';
-import { useAuth, canModifyTask, can } from '@/lib/auth';
+import { useAuth, canModifyTask, can, isProjectMember } from '@/lib/auth';
 import { useBoard } from '@/hooks/useProjects';
 import { useCapacity } from '@/hooks/useSprints';
 import { useMoveTask } from '@/hooks/useTasks';
 import { apiError } from '@/lib/api';
 import { formatRange } from '@/lib/dates';
-import { TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { statusColor } from '@/components/common/badges';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageLoader, ErrorState, EmptyState } from '@/components/common/states';
@@ -30,6 +30,7 @@ import { BoardSkeleton } from '@/components/common/skeletons';
 import { SortableTask, TaskCard } from './TaskCard';
 import { TaskDialog } from './TaskDialog';
 import { BoardFilters, EMPTY_FILTERS, matchesFilters, isFiltering } from './BoardFilters';
+import { StatusManagerDialog } from './StatusManagerDialog';
 
 export default function BoardPage() {
   const { currentProject, projectId, isLoading: projectsLoading } = useProject();
@@ -44,6 +45,7 @@ export default function BoardPage() {
   const [activeTask, setActiveTask] = useState(null);
   const [dialogTaskId, setDialogTaskId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
 
   const sensors = useSensors(
@@ -80,6 +82,12 @@ export default function BoardPage() {
   if (isError) return <div className="p-6"><ErrorState error={apiError(error)} onRetry={refetch} /></div>;
   if (isLoading || !data) return <BoardSkeleton />;
 
+  const statuses = data.statuses || [];
+  const statusKeys = statuses.map((s) => s.key);
+  const canConfigure =
+    can(user, 'status.manage') &&
+    (can(user, 'project.manage.any') || isProjectMember(currentProject, user?._id));
+
   if (!data.activeSprint) {
     return (
       <div className="p-6">
@@ -97,12 +105,12 @@ export default function BoardPage() {
   const filtering = isFiltering(filters);
   // Vue filtrée (le drag&drop continue d'opérer sur `board` complet).
   const viewBoard = filtering
-    ? TASK_STATUS_ORDER.reduce((acc, k) => ({ ...acc, [k]: board[k].filter((t) => matchesFilters(t, filters, currentProject?.key)) }), {})
+    ? statusKeys.reduce((acc, k) => ({ ...acc, [k]: (board[k] || []).filter((t) => matchesFilters(t, filters, currentProject?.key)) }), {})
     : board;
 
   function findContainer(id) {
     if (id in board) return id;
-    return TASK_STATUS_ORDER.find((k) => board[k].some((t) => t._id === id));
+    return statusKeys.find((k) => (board[k] || []).some((t) => t._id === id));
   }
 
   function onDragStart({ active }) {
@@ -134,8 +142,6 @@ export default function BoardPage() {
   async function onDragEnd({ active, over }) {
     setActiveTask(null);
 
-    // Colonne cible déduite de l'élément survolé (colonne vide => son id ;
-    // sinon la colonne qui contient la carte survolée). Indépendant de onDragOver.
     let toStatus = null;
     let order = 0;
     if (over) {
@@ -143,7 +149,7 @@ export default function BoardPage() {
         toStatus = over.id;
         order = board[toStatus].length;
       } else {
-        toStatus = TASK_STATUS_ORDER.find((k) => board[k].some((t) => t._id === over.id));
+        toStatus = statusKeys.find((k) => (board[k] || []).some((t) => t._id === over.id));
         if (toStatus) {
           const i = board[toStatus].findIndex((t) => t._id === over.id);
           order = i < 0 ? board[toStatus].length : i;
@@ -152,7 +158,7 @@ export default function BoardPage() {
     }
     // Repli : position courante de la carte (déplacée en live par onDragOver).
     if (!toStatus) {
-      toStatus = TASK_STATUS_ORDER.find((k) => board[k].some((t) => t._id === active.id));
+      toStatus = statusKeys.find((k) => (board[k] || []).some((t) => t._id === active.id));
       order = toStatus ? Math.max(0, board[toStatus].findIndex((t) => t._id === active.id)) : 0;
     }
     if (!toStatus) return;
@@ -173,7 +179,7 @@ export default function BoardPage() {
     }
   }
 
-  const totalTasks = TASK_STATUS_ORDER.reduce((s, k) => s + viewBoard[k].length, 0);
+  const totalTasks = statusKeys.reduce((s, k) => s + (viewBoard[k]?.length || 0), 0);
 
   return (
     <div className="flex h-full flex-col">
@@ -190,6 +196,11 @@ export default function BoardPage() {
         {capacity.data && <CapacityMeter cap={capacity.data} />}
 
         <div className="ml-auto flex items-center gap-2">
+          {canConfigure && (
+            <Button variant="outline" size="sm" onClick={() => setConfigOpen(true)}>
+              <Columns3 className="h-4 w-4" /> Colonnes
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link to="/planning"><Gauge className="h-4 w-4" /> Capacité</Link>
           </Button>
@@ -205,11 +216,12 @@ export default function BoardPage() {
       {/* Colonnes */}
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
         <div className="flex flex-1 gap-4 overflow-x-auto p-5">
-          {TASK_STATUS_ORDER.map((status) => (
+          {statuses.map((s) => (
             <Column
-              key={status}
-              status={status}
-              tasks={viewBoard[status]}
+              key={s.key}
+              meta={s}
+              tasks={viewBoard[s.key] || []}
+              statuses={statuses}
               user={user}
               project={currentProject}
               projectKey={currentProject?.key}
@@ -238,8 +250,9 @@ export default function BoardPage() {
       <TaskDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        defaults={{ status: 'todo', sprint: data.activeSprint._id }}
+        defaults={{ sprint: data.activeSprint._id }}
       />
+      <StatusManagerDialog open={configOpen} onOpenChange={setConfigOpen} projectId={projectId} />
     </div>
   );
 }
@@ -274,15 +287,15 @@ function CapacityMeter({ cap }) {
   );
 }
 
-function Column({ status, tasks, user, project, projectKey, onOpenTask, onAdd, onQuickStatus }) {
-  const meta = TASK_STATUS[status];
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+function Column({ meta, tasks, statuses, user, project, projectKey, onOpenTask, onAdd, onQuickStatus }) {
+  const { setNodeRef, isOver } = useDroppable({ id: meta.key });
+  const dot = statusColor(meta.color).dot;
   const hours = tasks.reduce((s, t) => s + (t.estimate || 0), 0);
 
   return (
     <div className="flex w-80 shrink-0 flex-col rounded-xl bg-slate-100/70">
       <div className="flex items-center gap-2 px-3 py-3">
-        <span className={cn('h-2 w-2 rounded-full', meta.dot)} />
+        <span className={cn('h-2 w-2 rounded-full', dot)} />
         <span className="text-sm font-semibold text-slate-700">{meta.label}</span>
         <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500">{tasks.length}</span>
         <span className="ml-auto text-xs text-slate-400">{hours} h</span>
@@ -296,6 +309,7 @@ function Column({ status, tasks, user, project, projectKey, onOpenTask, onAdd, o
             <SortableTask
               key={task._id}
               task={task}
+              statuses={statuses}
               projectKey={projectKey}
               onClick={() => onOpenTask(task._id)}
               disabled={!canModifyTask(user, project, task)}

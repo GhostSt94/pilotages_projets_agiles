@@ -283,7 +283,7 @@ export default function PlanningPage() {
       )}
 
       <TaskDialog open={!!openTaskId} onOpenChange={(o) => !o && setOpenTaskId(null)} taskId={openTaskId} />
-      <TaskDialog open={createOpen} onOpenChange={setCreateOpen} defaults={{ status: 'todo' }} />
+      <TaskDialog open={createOpen} onOpenChange={setCreateOpen} />
       <SprintForm open={formOpen} onOpenChange={setFormOpen} projectId={projectId} sprint={editSprint} />
     </div>
   );

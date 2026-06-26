@@ -10,6 +10,7 @@ const PERMISSIONS = [
   { key: 'user.manage', label: 'Gérer les utilisateurs', description: 'Créer des comptes et modifier rôle/capacité/jours travaillés.' },
   { key: 'role.manage', label: 'Gérer les rôles', description: 'Créer, modifier et supprimer les rôles et leurs permissions.' },
   { key: 'activity.view', label: 'Voir le journal d\'activité', description: 'Consulter la piste d\'audit globale (qui a fait quoi et quand).' },
+  { key: 'status.manage', label: 'Gérer les statuts', description: 'Configurer les colonnes/statuts du tableau Kanban d\'un projet.' },
 ];
 
 const PERMISSION_KEYS = PERMISSIONS.map((p) => p.key);
@@ -26,7 +27,7 @@ const SYSTEM_ROLES = [
     name: 'manager',
     label: 'Manager',
     color: 'blue',
-    permissions: ['project.manage', 'sprint.manage', 'task.manage.any', 'leave.review', 'user.view', 'activity.view'],
+    permissions: ['project.manage', 'sprint.manage', 'task.manage.any', 'leave.review', 'user.view', 'activity.view', 'status.manage'],
   },
   {
     name: 'developer',

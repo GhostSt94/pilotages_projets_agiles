@@ -7,13 +7,11 @@ const ctrl = require('../controllers/taskController');
 
 const router = express.Router();
 
-const STATUSES = ['todo', 'in_progress', 'in_review', 'done'];
-
 router.use(authenticate);
 
 router.get(
   '/',
-  [query('project').optional().isMongoId(), query('status').optional().isIn(STATUSES)],
+  [query('project').optional().isMongoId(), query('status').optional().isString()],
   validate,
   ctrl.listTasks
 );
@@ -29,7 +27,7 @@ router.post(
     body('estimate').optional().isFloat({ min: 0 }),
     body('type').optional().isIn(['feature', 'bug', 'tech']),
     body('priority').optional().isIn(['low', 'medium', 'high', 'critical']),
-    body('status').optional().isIn(STATUSES),
+    body('status').optional().isString(),
     body('assignee').optional({ nullable: true }).isMongoId(),
     body('labels').optional().isArray(),
   ],
@@ -42,7 +40,7 @@ router.patch(
   [
     param('id').isMongoId(),
     body('estimate').optional().isFloat({ min: 0 }),
-    body('status').optional().isIn(STATUSES),
+    body('status').optional().isString(),
     body('sprint').optional({ nullable: true }).isMongoId(),
     body('assignee').optional({ nullable: true }).isMongoId(),
   ],
@@ -54,7 +52,7 @@ router.patch(
   '/:id/move',
   [
     param('id').isMongoId(),
-    body('status').optional().isIn(STATUSES),
+    body('status').optional().isString(),
     body('sprint').optional({ nullable: true }).isMongoId(),
     body('order').optional().isInt(),
   ],

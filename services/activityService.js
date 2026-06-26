@@ -1,16 +1,5 @@
 const { ActivityLog } = require('../models');
 
-// Libellé FR d'un statut de tâche (pour les résumés « … → En cours »).
-const STATUS_LABEL = {
-  todo: 'À faire',
-  in_progress: 'En cours',
-  in_review: 'En revue',
-  done: 'Terminé',
-};
-function statusLabel(status) {
-  return STATUS_LABEL[status] || status;
-}
-
 // Identifiant lisible d'une tâche (« ATLAS-12 ») à partir du projet et de la tâche.
 function taskCode(project, task) {
   if (!task?.number) return `tâche`;
@@ -33,4 +22,4 @@ async function logActivity({ actor, action, entityType, entityId = null, project
   }
 }
 
-module.exports = { logActivity, statusLabel, taskCode };
+module.exports = { logActivity, taskCode };

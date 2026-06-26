@@ -1,13 +1,8 @@
 // Enums de l'API + labels FR + classes de couleur. Source unique de vérité côté front
 // (ne jamais coder « todo » / « high » en dur dans un composant).
 
-export const TASK_STATUS = {
-  todo: { label: 'À faire', badge: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' },
-  in_progress: { label: 'En cours', badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-  in_review: { label: 'En revue', badge: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
-  done: { label: 'Terminé', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-};
-export const TASK_STATUS_ORDER = ['todo', 'in_progress', 'in_review', 'done'];
+// Les statuts de tâche sont désormais paramétrables PAR PROJET (modèle Status côté API).
+// Voir hooks/useStatuses + STATUS_COLORS dans components/common/badges.jsx.
 
 export const TASK_PRIORITY = {
   low: { label: 'Basse', badge: 'bg-slate-100 text-slate-500' },

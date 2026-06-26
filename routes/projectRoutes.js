@@ -5,6 +5,7 @@ const { authenticate } = require('../middlewares/auth');
 const { requirePermission } = require('../middlewares/role');
 const ctrl = require('../controllers/projectController');
 const sprintCtrl = require('../controllers/sprintController');
+const statusCtrl = require('../controllers/statusController');
 
 const router = express.Router();
 
@@ -14,6 +15,37 @@ router.get('/', ctrl.listProjects);
 router.get('/:id', param('id').isMongoId(), validate, ctrl.getProject);
 router.get('/:id/board', param('id').isMongoId(), validate, ctrl.getBoard);
 router.get('/:id/sprints', param('id').isMongoId(), validate, sprintCtrl.listProjectSprints);
+
+// --- Statuts (colonnes Kanban) du projet ---
+router.get('/:id/statuses', param('id').isMongoId(), validate, statusCtrl.listStatuses);
+router.post(
+  '/:id/statuses',
+  requirePermission('status.manage'),
+  [param('id').isMongoId(), body('label').isString().trim().notEmpty().withMessage('Libellé requis.'), body('color').optional().isString(), body('isDone').optional().isBoolean()],
+  validate,
+  statusCtrl.createStatus
+);
+router.patch(
+  '/:id/statuses/reorder',
+  requirePermission('status.manage'),
+  [param('id').isMongoId(), body('order').isArray().withMessage('order doit être un tableau.')],
+  validate,
+  statusCtrl.reorderStatuses
+);
+router.patch(
+  '/:id/statuses/:statusId',
+  requirePermission('status.manage'),
+  [param('id').isMongoId(), param('statusId').isMongoId(), body('label').optional().isString(), body('color').optional().isString(), body('isDone').optional().isBoolean()],
+  validate,
+  statusCtrl.updateStatus
+);
+router.delete(
+  '/:id/statuses/:statusId',
+  requirePermission('status.manage'),
+  [param('id').isMongoId(), param('statusId').isMongoId()],
+  validate,
+  statusCtrl.deleteStatus
+);
 
 router.post(
   '/',

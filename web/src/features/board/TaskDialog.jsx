@@ -16,9 +16,8 @@ import {
   TASK_TYPE_ORDER,
   TASK_PRIORITY,
   TASK_PRIORITY_ORDER,
-  TASK_STATUS,
-  TASK_STATUS_ORDER,
 } from '@/lib/constants';
+import { useStatuses } from '@/hooks/useStatuses';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +32,7 @@ import { ImageViewer } from '@/components/common/ImageViewer';
 
 const UNASSIGNED = '__none__';
 const BACKLOG = '__backlog__';
-const EMPTY = { title: '', description: '', type: 'feature', priority: 'medium', status: 'todo', estimate: 0, assignee: UNASSIGNED, sprint: BACKLOG, labels: '' };
+const EMPTY = { title: '', description: '', type: 'feature', priority: 'medium', status: '', estimate: 0, assignee: UNASSIGNED, sprint: BACKLOG, labels: '' };
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4400';
 
 export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
@@ -42,6 +41,9 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
   const { user } = useAuth();
   const { data: sprints = [] } = useSprints(projectId);
   const { data: task, isLoading } = useTask(editing && open ? taskId : null);
+  // Statuts du projet concerné (celui de la tâche en édition, sinon le projet courant).
+  const statusProjectId = editing ? (task?.project?._id || task?.project) : projectId;
+  const { data: statuses = [] } = useStatuses(open ? statusProjectId : null);
 
   const create = useCreateTask();
   const update = useUpdateTask();
@@ -105,7 +107,7 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
       description: form.description,
       type: form.type,
       priority: form.priority,
-      status: form.status,
+      status: form.status || statuses[0]?.key,
       estimate: Number(form.estimate) || 0,
       assignee: form.assignee === UNASSIGNED ? null : form.assignee,
       sprint: form.sprint === BACKLOG ? null : form.sprint,
@@ -231,7 +233,7 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
                   <span className="font-mono text-xs font-medium text-slate-500">{taskCode(task)}</span>
                 )}
                 <TypeTag type={form.type} />
-                {editing && <StatusBadge status={form.status} />}
+                {editing && <StatusBadge meta={task?.statusMeta} />}
                 {editing && task?.createdAt && (
                   <span className="text-xs text-slate-400">Créée le {formatDate(task.createdAt)}</span>
                 )}
@@ -465,10 +467,10 @@ export function TaskDialog({ open, onOpenChange, taskId, defaults }) {
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Détails</h4>
 
                 <Meta icon={CircleDot} label="Statut">
-                  <Select value={form.status} onValueChange={(v) => set('status', v)} disabled={!canEdit}>
+                  <Select value={form.status || statuses[0]?.key || ''} onValueChange={(v) => set('status', v)} disabled={!canEdit}>
                     <SelectTrigger className="h-9 bg-white"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {TASK_STATUS_ORDER.map((s) => <SelectItem key={s} value={s}>{TASK_STATUS[s].label}</SelectItem>)}
+                      {statuses.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </Meta>

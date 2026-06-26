@@ -3,8 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Clock, MessageSquare, GripVertical, MoreHorizontal, Check } from 'lucide-react';
 import { cn, taskCode } from '@/lib/utils';
 import { Avatar } from '@/components/common/Avatar';
-import { TypeTag, PriorityTag } from '@/components/common/badges';
-import { TASK_STATUS, TASK_STATUS_ORDER } from '@/lib/constants';
+import { TypeTag, PriorityTag, statusColor } from '@/components/common/badges';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 /** Carte de tâche (présentation). */
-export function TaskCard({ task, onClick, dragging, grip = false, onQuickStatus, projectKey }) {
+export function TaskCard({ task, onClick, dragging, grip = false, onQuickStatus, projectKey, statuses }) {
   const code = taskCode(task, projectKey);
   return (
     <div
@@ -32,7 +31,7 @@ export function TaskCard({ task, onClick, dragging, grip = false, onQuickStatus,
         </div>
         <div className="flex items-center gap-1">
           <PriorityTag priority={task.priority} />
-          {onQuickStatus && <QuickStatusMenu task={task} onQuickStatus={onQuickStatus} />}
+          {onQuickStatus && <QuickStatusMenu task={task} statuses={statuses} onQuickStatus={onQuickStatus} />}
           {grip && <GripVertical className="h-4 w-4 text-slate-300 opacity-0 transition group-hover:opacity-100" />}
         </div>
       </div>
@@ -64,8 +63,9 @@ export function TaskCard({ task, onClick, dragging, grip = false, onQuickStatus,
 }
 
 /** Menu rapide pour changer le statut sans ouvrir le détail. */
-function QuickStatusMenu({ task, onQuickStatus }) {
+function QuickStatusMenu({ task, statuses = [], onQuickStatus }) {
   const stop = (e) => e.stopPropagation();
+  if (!statuses.length) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -81,14 +81,14 @@ function QuickStatusMenu({ task, onQuickStatus }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={stop}>
         <DropdownMenuLabel>Déplacer vers</DropdownMenuLabel>
-        {TASK_STATUS_ORDER.map((s) => (
+        {statuses.map((s) => (
           <DropdownMenuItem
-            key={s}
-            onClick={(e) => { stop(e); if (s !== task.status) onQuickStatus(task._id, s); }}
+            key={s.key}
+            onClick={(e) => { stop(e); if (s.key !== task.status) onQuickStatus(task._id, s.key); }}
           >
-            <span className={cn('h-1.5 w-1.5 rounded-full', TASK_STATUS[s].dot)} />
-            {TASK_STATUS[s].label}
-            {s === task.status && <Check className="ml-auto h-4 w-4 text-primary" />}
+            <span className={cn('h-1.5 w-1.5 rounded-full', statusColor(s.color).dot)} />
+            {s.label}
+            {s.key === task.status && <Check className="ml-auto h-4 w-4 text-primary" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -101,7 +101,7 @@ function QuickStatusMenu({ task, onQuickStatus }) {
  * Toute la carte est saisissable ; un clic simple (sans déplacement) ouvre le détail
  * grâce à la contrainte d'activation du PointerSensor (distance 5px).
  */
-export function SortableTask({ task, onClick, disabled, onQuickStatus, projectKey }) {
+export function SortableTask({ task, onClick, disabled, onQuickStatus, projectKey, statuses }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task._id,
     disabled,
@@ -123,6 +123,7 @@ export function SortableTask({ task, onClick, disabled, onQuickStatus, projectKe
         grip={!disabled}
         onQuickStatus={disabled ? undefined : onQuickStatus}
         projectKey={projectKey}
+        statuses={statuses}
       />
     </div>
   );

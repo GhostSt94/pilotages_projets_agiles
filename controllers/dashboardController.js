@@ -3,6 +3,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { computeSprintCapacity } = require('../services/capacityService');
 const { canAccessProject } = require('../utils/authz');
+const { getProjectStatuses, toMeta } = require('../services/statusService');
 
 // GET /dashboard?sprint= — avancement du sprint et charge par membre.
 const getDashboard = asyncHandler(async (req, res) => {
@@ -19,14 +20,23 @@ const getDashboard = asyncHandler(async (req, res) => {
 
   const tasks = await Task.find({ sprint: sprint._id }).populate('assignee', 'name email');
 
-  // Avancement : tâches et heures par statut.
-  const byStatus = { todo: 0, in_progress: 0, in_review: 0, done: 0 };
+  // Statuts (colonnes) paramétrables du projet.
+  const statuses = await getProjectStatuses(project._id);
+  const doneSet = new Set(statuses.filter((s) => s.isDone).map((s) => s.key));
+
+  // Avancement : tâches et heures par statut (indexé par clé de statut).
+  const byStatus = {};
+  for (const s of statuses) byStatus[s.key] = 0;
   let totalEstimate = 0;
   let doneEstimate = 0;
+  let doneTasks = 0;
   for (const t of tasks) {
     if (byStatus[t.status] !== undefined) byStatus[t.status] += 1;
     totalEstimate += t.estimate || 0;
-    if (t.status === 'done') doneEstimate += t.estimate || 0;
+    if (doneSet.has(t.status)) {
+      doneEstimate += t.estimate || 0;
+      doneTasks += 1;
+    }
   }
 
   // Temps réellement saisi par utilisateur sur les tâches du sprint (journal de temps).
@@ -55,7 +65,7 @@ const getDashboard = asyncHandler(async (req, res) => {
     const entry = loadByMember.get(key);
     entry.taskCount += 1;
     entry.estimateHours += t.estimate || 0;
-    if (t.status === 'done') entry.doneHours += t.estimate || 0;
+    if (doneSet.has(t.status)) entry.doneHours += t.estimate || 0;
   }
 
   // Capacité (réutilise le service) pour le taux d'occupation par membre.
@@ -83,10 +93,11 @@ const getDashboard = asyncHandler(async (req, res) => {
       endDate: sprint.endDate,
       project: sprint.project,
     },
+    statuses: statuses.map(toMeta),
     progress: {
       tasksByStatus: byStatus,
       totalTasks: tasks.length,
-      doneTasks: byStatus.done,
+      doneTasks,
       totalEstimateHours: totalEstimate,
       doneEstimateHours: doneEstimate,
       remainingEstimateHours: totalEstimate - doneEstimate,
