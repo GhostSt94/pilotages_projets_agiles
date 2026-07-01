@@ -45,6 +45,7 @@ export default function BoardPage() {
   const [activeTask, setActiveTask] = useState(null);
   const [dialogTaskId, setDialogTaskId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createStatus, setCreateStatus] = useState(null); // colonne d'origine du « + Ajouter »
   const [configOpen, setConfigOpen] = useState(false);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
 
@@ -204,7 +205,7 @@ export default function BoardPage() {
           <Button asChild variant="outline" size="sm">
             <Link to="/planning"><Gauge className="h-4 w-4" /> Capacité</Link>
           </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" onClick={() => { setCreateStatus(null); setCreateOpen(true); }}>
             <Plus className="h-4 w-4" /> Tâche
           </Button>
         </div>
@@ -226,7 +227,7 @@ export default function BoardPage() {
               project={currentProject}
               projectKey={currentProject?.key}
               onOpenTask={setDialogTaskId}
-              onAdd={() => setCreateOpen(true)}
+              onAdd={(statusKey) => { setCreateStatus(statusKey); setCreateOpen(true); }}
               onQuickStatus={onQuickStatus}
             />
           ))}
@@ -250,7 +251,7 @@ export default function BoardPage() {
       <TaskDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        defaults={{ sprint: data.activeSprint._id }}
+        defaults={{ sprint: data.activeSprint._id, ...(createStatus ? { status: createStatus } : {}) }}
       />
       <StatusManagerDialog open={configOpen} onOpenChange={setConfigOpen} projectId={projectId} />
     </div>
@@ -318,7 +319,7 @@ function Column({ meta, tasks, statuses, user, project, projectKey, onOpenTask, 
           ))}
         </SortableContext>
         <button
-          onClick={onAdd}
+          onClick={() => onAdd(meta.key)}
           className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-2 text-xs font-medium text-slate-400 transition hover:border-primary/40 hover:text-primary"
         >
           <Plus className="h-4 w-4" /> Ajouter
